@@ -4,21 +4,23 @@
 
 **Goal:** Erdemli apartının 101–115 odalarını (durum, fatura, fiyat) telefon + bilgisayardan ortak takip eden basit bir web uygulaması yapmak.
 
-**Architecture:** Tek bir Next.js (App Router) projesi. Frontend + API aynı repoda; API route'ları sunucu tarafında Cloudflare D1'e REST API ile bağlanır. Frontend kendi `/api` route'larını çağırır (CORS yok, gizli anahtar tarayıcıya düşmez). Basit PIN + HttpOnly çerez ile giriş. Vercel'e deploy edilir.
+**Architecture:** Tek bir Next.js (App Router) projesi, `@opennextjs/cloudflare` ile Cloudflare Workers'ta çalışır. Frontend + API aynı repoda; API route'ları sunucu tarafında D1'e **doğrudan binding** (`getCloudflareContext().env.DB`) ile bağlanır — REST/token yok. Frontend kendi `/api` route'larını çağırır (CORS yok, gizli anahtar tarayıcıya düşmez). Basit PIN + HttpOnly çerez ile giriş. `wrangler` ile Cloudflare'e deploy edilir.
 
-**Tech Stack:** Next.js (App Router), React, TypeScript, Cloudflare D1 (REST API), Vitest + Testing Library, Vercel.
+**Tech Stack:** Next.js (App Router), React, TypeScript 7, `@opennextjs/cloudflare`, Cloudflare Workers + D1 (binding), Vitest + Testing Library, wrangler.
 
 ## Global Constraints
 
-- **TypeScript:** hedef TS 7 (native compiler). Kurulum sırasında stabil değilse en güncel TS 5.x kullanılır. `tsconfig` her zaman `"strict": true`.
+- **TypeScript 7** (native compiler, GA 2026-07-08). `tsconfig` her zaman `"strict": true`. TS7'yi engelleyen `vite-tsconfig-paths` kaldırılır; `@/*` alias'ı vitest'te elle `resolve.alias` ile verilir.
 - **Node:** 20+.
 - **Paket yöneticisi:** npm.
 - **Source map:** production'da kapalı — `next.config.ts` içinde `productionBrowserSourceMaps: false`.
-- **Gizli anahtarlar** yalnızca sunucu-taraflı env'de: `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_API_TOKEN`, `APP_PIN`. Tarayıcıya HİÇBİR gizli değer düşmez; `NEXT_PUBLIC_*` değişkeni yoktur.
+- **D1 erişimi:** yalnızca Cloudflare D1 **binding** (`getCloudflareContext().env.DB`). REST API / API token YOK.
+- **Secret'lar:** `APP_PIN` yalnızca Cloudflare binding env'inde (`getCloudflareContext().env.APP_PIN`) — `process.env`'de değil, tarayıcıda değil. Yerelde `.dev.vars`, production'da `wrangler secret`. `NEXT_PUBLIC_*` değişkeni yoktur.
 - **Odalar:** 101–115 sabit; oda ekleme/silme yok.
 - **Kullanıcıya görünen tüm metinler Türkçe.**
-- **D1 erişimi** yalnızca Cloudflare D1 REST API ile.
 - Her task sonunda **commit**.
+
+> **NOT (2026-07-20 revizyonu):** Task 1 önce Vercel + D1 REST + TS 5.9.3 varsayımıyla tamamlandı (commit `26fa611`). Task 1B bu iskeleti Cloudflare/OpenNext + TS7 + D1 binding'e taşır. Task 2 ve sonrası bu revize mimariyi izler.
 
 ---
 
@@ -28,15 +30,19 @@
 apartsystem/
 ├── package.json
 ├── tsconfig.json
-├── next.config.ts               # sourcemap kapalı
+├── next.config.ts               # sourcemap kapalı + initOpenNextCloudflareForDev()
+├── open-next.config.ts          # OpenNext adaptör config
+├── wrangler.jsonc               # Worker + D1 binding (DB) + compat flags
+├── worker-configuration.d.ts    # `wrangler types` çıktısı (CloudflareEnv)
 ├── vitest.config.ts
 ├── vitest.setup.ts              # test env + jest-dom
-├── .env.local.example
+├── .dev.vars.example            # yerel secret örneği (APP_PIN)
 ├── schema.sql                   # D1 tablo + seed
 ├── README.md                    # kurulum adımları
 └── src/
     ├── lib/
-    │   ├── d1.ts                # D1 REST istemcisi: d1Query()
+    │   ├── env.ts               # getEnv(): binding env (DB, APP_PIN)
+    │   ├── d1.ts                # D1 binding istemcisi: d1Query()
     │   ├── rooms.ts             # Room tipi, validateRoomPatch, getAllRooms, updateRoom
     │   └── auth.ts              # PIN doğrulama + oturum token'ı
     ├── components/
@@ -259,115 +265,237 @@ git commit -m "chore: scaffold Next.js + TS + vitest project"
 
 ---
 
-## Task 2: Cloudflare D1 REST istemcisi + şema
+## Task 1B: Cloudflare (OpenNext) + TS7 geçişi
+
+Task 1 iskeleti Vercel + TS 5.9.3 varsayımıyla kuruldu. Bu task onu Cloudflare Workers (`@opennextjs/cloudflare`) + TS7 + D1 binding altyapısına taşır. Uygulama mantığı yok; yalnızca araç/altyapı.
 
 **Files:**
+- Modify: `package.json` (scriptler + bağımlılıklar), `next.config.ts`, `vitest.config.ts`, `.gitignore`
+- Create: `open-next.config.ts`, `wrangler.jsonc`, `.dev.vars.example`, `.dev.vars` (gitignored), `worker-configuration.d.ts` (üretilir)
+- Remove dep: `vite-tsconfig-paths`
+
+**Interfaces:**
+- Consumes: (Task 1 iskeleti)
+- Produces: `getCloudflareContext()` sunucu kodunda kullanılabilir; `@/*` alias'ı vitest'te `resolve.alias` ile çalışır; `npm run deploy` / `npm run preview` / `npm run cf-typegen` scriptleri.
+
+- [ ] **Step 1: vite-tsconfig-paths'i kaldır, OpenNext + TS7 + workers-types kur**
+
+Run:
+```bash
+npm remove vite-tsconfig-paths
+npm install --save-dev @opennextjs/cloudflare wrangler @cloudflare/workers-types
+npm install --save-dev typescript@7
+```
+TS7 dağıtım etiketi/CLI adı farklıysa (ör. native binary `tsgo`), somut sürümü çöz ve raporla; kurulamıyorsa Global Constraints gereği en güncel TS'e düş ve nedenini raporla. Beklenen: `typescript` 7.x `package.json`'da.
+
+- [ ] **Step 2: vitest.config.ts — plugin yerine elle alias**
+
+`vitest.config.ts` (tamamını değiştir):
+```ts
+import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+export default defineConfig({
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./vitest.setup.ts"],
+  },
+});
+```
+
+- [ ] **Step 3: next.config.ts — OpenNext dev bağlaması**
+
+`next.config.ts` (tamamını değiştir):
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  productionBrowserSourceMaps: false,
+};
+
+export default nextConfig;
+
+// Yerel `next dev`'de Cloudflare bindinglerini (D1, secrets) etkinleştirir.
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
+```
+
+- [ ] **Step 4: open-next.config.ts oluştur**
+
+```ts
+import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+
+export default defineCloudflareConfig();
+```
+
+- [ ] **Step 5: wrangler.jsonc oluştur**
+
+```jsonc
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "apart-oda-takip",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "apart-oda",
+      "database_id": "REPLACE_AFTER_D1_CREATE"
+    }
+  ]
+}
+```
+Not: `database_id` gerçek değeri Task 8'de `wrangler d1 create` sonrası girilir; yerel geliştirmede miniflare binding adına (`DB`) göre yerel bir DB kullanır.
+
+- [ ] **Step 6: package.json scriptleri ekle**
+
+`scripts` içine ekle:
+```json
+"deploy": "opennextjs-cloudflare build && wrangler deploy",
+"preview": "opennextjs-cloudflare build && wrangler dev",
+"cf-typegen": "wrangler types --env-interface CloudflareEnv"
+```
+
+- [ ] **Step 7: .dev.vars.example + .dev.vars + .gitignore**
+
+`.dev.vars.example`:
+```
+APP_PIN=1234
+```
+`.dev.vars` (yerel, gitignored — aynı içerik, gerçek PIN).
+`.gitignore`'a ekle:
+```
+.open-next
+.dev.vars
+```
+(`.wrangler` yerel state de eklenebilir.)
+
+- [ ] **Step 8: Tipleri üret**
+
+Run: `npm run cf-typegen`
+Expected: `worker-configuration.d.ts` üretilir (D1 binding `DB` için global tipler). Not: `APP_PIN` bir secret olduğu için üretilen tipe girmez; `src/lib/env.ts` (Task 2) kendi `AppEnv` arayüzünde `APP_PIN`'i tanımlar.
+
+- [ ] **Step 9: Testler hâlâ geçiyor + tip kontrolü**
+
+Run:
+```bash
+npm test
+npx tsc --noEmit   # veya TS7 native CLI (ör. tsgo --noEmit)
+```
+Expected: `health.test.ts` PASS (yeni alias ile), tip kontrolü temiz.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add -A
+git commit -m "chore: migrate scaffold to Cloudflare OpenNext + TS7 + D1 binding"
+```
+
+---
+
+## Task 2: env erişimi + D1 binding istemcisi + şema
+
+**Files:**
+- Create: `src/lib/env.ts`
 - Create: `src/lib/d1.ts`
 - Create: `schema.sql`
-- Create: `.env.local.example`
 - Test: `src/lib/d1.test.ts`
 
 **Interfaces:**
-- Consumes: env `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, `CF_API_TOKEN`.
-- Produces: `d1Query<T>(sql: string, params?: unknown[]): Promise<T[]>` — D1'e SQL çalıştırır, satır dizisi döndürür.
+- Consumes: `getCloudflareContext` (`@opennextjs/cloudflare`), D1 binding `DB`, `D1Database` tipi (`@cloudflare/workers-types`).
+- Produces:
+  - `interface AppEnv { DB: D1Database; APP_PIN: string }`
+  - `getEnv(): AppEnv` — binding env'ini döndürür.
+  - `d1Query<T>(sql: string, params?: unknown[]): Promise<T[]>` — D1 binding üzerinden SQL çalıştırır, satır dizisi döndürür.
 
-- [ ] **Step 1: Failing test yaz**
+- [ ] **Step 1: env.ts oluştur (ince sarmalayıcı — testsiz)**
+
+`src/lib/env.ts`:
+```ts
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { D1Database } from "@cloudflare/workers-types";
+
+export interface AppEnv {
+  DB: D1Database;
+  APP_PIN: string;
+}
+
+export function getEnv(): AppEnv {
+  return getCloudflareContext().env as unknown as AppEnv;
+}
+```
+
+- [ ] **Step 2: d1Query için failing test yaz (env mock'lu)**
 
 `src/lib/d1.test.ts`:
 ```ts
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@/lib/env", () => ({ getEnv: vi.fn() }));
+import { getEnv } from "@/lib/env";
 import { d1Query } from "@/lib/d1";
 
-describe("d1Query", () => {
-  beforeEach(() => {
-    process.env.CF_ACCOUNT_ID = "acc";
-    process.env.CF_D1_DATABASE_ID = "db";
-    process.env.CF_API_TOKEN = "tok";
-  });
-  afterEach(() => vi.restoreAllMocks());
+function fakeDb(results: unknown[] | undefined) {
+  const all = vi.fn().mockResolvedValue({ results, success: true });
+  const bind = vi.fn().mockReturnValue({ all });
+  const prepare = vi.fn().mockReturnValue({ bind });
+  return { db: { prepare }, prepare, bind, all };
+}
 
-  it("doğru URL, header ve gövde ile POST atar ve satırları döndürür", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, result: [{ results: [{ oda_no: 101 }] }] }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+describe("d1Query", () => {
+  it("prepare/bind/all zincirini çağırır ve satırları döndürür", async () => {
+    const f = fakeDb([{ oda_no: 101 }]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(getEnv).mockReturnValue({ DB: f.db, APP_PIN: "x" } as any);
 
     const rows = await d1Query<{ oda_no: number }>("SELECT * FROM rooms WHERE oda_no = ?", [101]);
 
     expect(rows).toEqual([{ oda_no: 101 }]);
-    const [url, opts] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.cloudflare.com/client/v4/accounts/acc/d1/database/db/query");
-    expect(opts.method).toBe("POST");
-    expect(opts.headers.Authorization).toBe("Bearer tok");
-    expect(JSON.parse(opts.body)).toEqual({ sql: "SELECT * FROM rooms WHERE oda_no = ?", params: [101] });
+    expect(f.prepare).toHaveBeenCalledWith("SELECT * FROM rooms WHERE oda_no = ?");
+    expect(f.bind).toHaveBeenCalledWith(101);
   });
 
-  it("success:false gelince hata fırlatır", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: false, errors: [{ message: "boom" }] }),
-    }));
-    await expect(d1Query("SELECT 1")).rejects.toThrow(/D1 sorgu hatası/);
-  });
-
-  it("env eksikse hata fırlatır", async () => {
-    delete process.env.CF_API_TOKEN;
-    await expect(d1Query("SELECT 1")).rejects.toThrow(/ortam değişkenleri eksik/);
+  it("results boş/undefined ise boş dizi döndürür", async () => {
+    const f = fakeDb(undefined);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(getEnv).mockReturnValue({ DB: f.db, APP_PIN: "x" } as any);
+    expect(await d1Query("SELECT 1")).toEqual([]);
   });
 });
 ```
 
-- [ ] **Step 2: Testi çalıştır, FAIL doğrula**
+- [ ] **Step 3: Testi çalıştır, FAIL doğrula**
 
 Run: `npm test -- d1`
 Expected: FAIL ("d1Query is not a function" / modül yok).
 
-- [ ] **Step 3: d1.ts implement et**
+- [ ] **Step 4: d1.ts implement et**
 
 `src/lib/d1.ts`:
 ```ts
-interface D1Response<T> {
-  success: boolean;
-  result?: { results: T[] }[];
-  errors?: unknown;
-}
+import { getEnv } from "@/lib/env";
 
 export async function d1Query<T = Record<string, unknown>>(
   sql: string,
   params: unknown[] = [],
 ): Promise<T[]> {
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const dbId = process.env.CF_D1_DATABASE_ID;
-  const token = process.env.CF_API_TOKEN;
-  if (!accountId || !dbId || !token) {
-    throw new Error("Cloudflare D1 ortam değişkenleri eksik");
-  }
-
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sql, params }),
-  });
-
-  const json = (await res.json()) as D1Response<T>;
-  if (!res.ok || !json.success) {
-    throw new Error(`D1 sorgu hatası: ${JSON.stringify(json.errors ?? res.status)}`);
-  }
-  return json.result?.[0]?.results ?? [];
+  const { results } = await getEnv().DB.prepare(sql).bind(...params).all<T>();
+  return results ?? [];
 }
 ```
 
-- [ ] **Step 4: Testi çalıştır, PASS doğrula**
+- [ ] **Step 5: Testi çalıştır, PASS doğrula**
 
 Run: `npm test -- d1`
-Expected: 3 test PASS.
+Expected: 2 test PASS.
 
-- [ ] **Step 5: schema.sql oluştur**
+- [ ] **Step 6: schema.sql oluştur**
 
 `schema.sql`:
 ```sql
@@ -384,24 +512,11 @@ INSERT OR IGNORE INTO rooms (oda_no) VALUES
   (109),(110),(111),(112),(113),(114),(115);
 ```
 
-- [ ] **Step 6: .env.local.example oluştur**
-
-`.env.local.example`:
-```
-# Cloudflare D1 (sunucu tarafı — gizli)
-CF_ACCOUNT_ID=
-CF_D1_DATABASE_ID=
-CF_API_TOKEN=
-
-# Uygulama giriş PIN'i
-APP_PIN=
-```
-
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/lib/d1.ts src/lib/d1.test.ts schema.sql .env.local.example
-git commit -m "feat: add Cloudflare D1 REST client and schema"
+git add src/lib/env.ts src/lib/d1.ts src/lib/d1.test.ts schema.sql
+git commit -m "feat: add D1 binding client, env accessor and schema"
 ```
 
 ---
@@ -591,7 +706,7 @@ git commit -m "feat: add room domain logic with validation"
 - Test: `src/lib/auth.test.ts`
 
 **Interfaces:**
-- Consumes: env `APP_PIN`, global `crypto.subtle`.
+- Consumes: `getEnv()` (`@/lib/env`) → `APP_PIN`; global `crypto.subtle`.
 - Produces:
   - `const SESSION_COOKIE = "apart_session"`
   - `checkPin(pin: string): boolean`
@@ -602,12 +717,20 @@ git commit -m "feat: add room domain logic with validation"
 
 `src/lib/auth.test.ts`:
 ```ts
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("@/lib/env", () => ({ getEnv: vi.fn() }));
+import { getEnv } from "@/lib/env";
 import { SESSION_COOKIE, checkPin, expectedToken, isAuthed } from "@/lib/auth";
+
+function setPin(pin: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vi.mocked(getEnv).mockReturnValue({ APP_PIN: pin } as any);
+}
 
 describe("auth", () => {
   beforeEach(() => {
-    process.env.APP_PIN = "4242";
+    setPin("4242");
   });
 
   it("çerez adı sabit", () => {
@@ -625,7 +748,7 @@ describe("auth", () => {
     expect(t1).toBe(t2);
     expect(t1).toHaveLength(64); // SHA-256 hex
 
-    process.env.APP_PIN = "9999";
+    setPin("9999");
     const t3 = await expectedToken();
     expect(t3).not.toBe(t1);
   });
@@ -648,6 +771,8 @@ Expected: FAIL.
 
 `src/lib/auth.ts`:
 ```ts
+import { getEnv } from "@/lib/env";
+
 export const SESSION_COOKIE = "apart_session";
 const TOKEN_MESSAGE = "apart-oda-takip-v1";
 
@@ -667,7 +792,7 @@ async function hmacHex(key: string, message: string): Promise<string> {
 }
 
 function requirePin(): string {
-  const pin = process.env.APP_PIN;
+  const pin = getEnv().APP_PIN;
   if (!pin) throw new Error("APP_PIN tanımlı değil");
   return pin;
 }
@@ -1287,57 +1412,58 @@ git commit -m "feat: add room grid, card, editor and polling UI"
 # Apart Oda Takip
 
 Erdemli apartının 101–115 odalarını (durum, fatura, fiyat) takip eden
-Next.js + Cloudflare D1 uygulaması. Vercel'de barınır.
+Next.js uygulaması. `@opennextjs/cloudflare` ile Cloudflare Workers'ta
+çalışır, verisi Cloudflare D1'de durur.
 
 ## Yerel geliştirme
 
 ```bash
 npm install
-cp .env.local.example .env.local   # değerleri doldur
+cp .dev.vars.example .dev.vars          # APP_PIN'i ayarla
+npx wrangler d1 execute apart-oda --local --file=schema.sql   # yerel D1'e şema
 npm run dev
 ```
 
-## Cloudflare D1 kurulumu
+## Cloudflare kurulumu
 
 1. Cloudflare hesabı aç (ücretsiz).
-2. Wrangler ile veritabanı oluştur:
+2. D1 veritabanı oluştur:
    ```bash
    npx wrangler d1 create apart-oda
    ```
-   Çıktıdaki `database_id`'yi not al.
-3. Şemayı uygula:
+   Çıktıdaki `database_id`'yi `wrangler.jsonc` → `d1_databases[0].database_id`
+   alanına yaz.
+3. Şemayı uzak D1'e uygula:
    ```bash
    npx wrangler d1 execute apart-oda --remote --file=schema.sql
    ```
-4. Dashboard → My Profile → API Tokens → "Create Token" →
-   D1 için **Edit** yetkili dar kapsamlı bir token oluştur.
-5. Hesap ID'sini Cloudflare dashboard'un sağ alanından al.
+4. PIN secret'ını gir:
+   ```bash
+   npx wrangler secret put APP_PIN
+   ```
 
-## Env değişkenleri
+## Deploy
 
-`.env.local` (yerel) ve Vercel Project Settings → Environment Variables
-(production) içine gir:
+```bash
+npm run deploy        # opennextjs-cloudflare build && wrangler deploy
+```
+Verilen `*.workers.dev` URL'ini telefonda/bilgisayarda aç, PIN ile gir.
 
-| Değişken             | Açıklama                          |
-|----------------------|-----------------------------------|
-| `CF_ACCOUNT_ID`      | Cloudflare hesap ID               |
-| `CF_D1_DATABASE_ID`  | D1 database_id                    |
-| `CF_API_TOKEN`       | D1 Edit yetkili API token         |
-| `APP_PIN`            | Uygulama giriş PIN'i (ör. 4242)   |
+## Bindingler / secret'lar
 
-## Vercel'e deploy
+| Ad         | Tür            | Nerede                                   |
+|------------|----------------|------------------------------------------|
+| `DB`       | D1 binding     | `wrangler.jsonc` (`database_id`)         |
+| `APP_PIN`  | secret         | yerelde `.dev.vars`, prod'da `wrangler secret` |
 
-1. Repoyu GitHub'a push et.
-2. vercel.com → New Project → repoyu seç.
-3. Env değişkenlerini gir (yukarıdaki tablo).
-4. Deploy. Verilen URL'i telefonda/bilgisayarda aç, PIN ile gir.
+Kodda ikisi de `getCloudflareContext().env` üzerinden okunur (bkz. `src/lib/env.ts`).
 
 ## Güvenlik notları
 
-- Gizli anahtarlar yalnızca sunucu tarafında; tarayıcıya düşmez.
+- D1'e binding ile erişilir; REST API / API token YOK.
+- `APP_PIN` yalnızca sunucu-taraflı binding env'inde; tarayıcıya düşmez.
 - Production build'de source map kapalı.
-- Giriş tek ortak PIN ile; PIN'i değiştirmek için `APP_PIN`'i güncelle
-  ve yeniden deploy et.
+- PIN'i değiştirmek için `wrangler secret put APP_PIN` ile güncelle.
 ````
 
 - [ ] **Step 2: Production build ile source map kapalı olduğunu doğrula**
@@ -1346,15 +1472,15 @@ Run:
 ```bash
 npm run build
 ```
-Expected: build başarılı. `.next` altında tarayıcı chunk'ları için `.js.map` üretilmediğini teyit et:
+Expected: `next build` başarılı. Tarayıcı chunk'ları için `.js.map` üretilmediğini teyit et:
 ```bash
 find .next/static -name "*.js.map" | head
 ```
 Expected: çıktı boş (source map yok).
 
-- [ ] **Step 3: Uçtan uca manuel doğrulama (gerçek D1 ile)**
+- [ ] **Step 3: Uçtan uca manuel doğrulama (yerel D1 + bindingler ile)**
 
-`.env.local` gerçek değerlerle doldurulmuş halde:
+`.dev.vars` (APP_PIN) dolu ve yerel D1 şeması uygulanmış halde:
 ```bash
 npm run dev
 ```
@@ -1363,6 +1489,9 @@ npm run dev
 - Doğru PIN → 101–115 kartları görünür.
 - Bir karta tıkla → durum/fatura/fiyat değiştir → Kaydet → kart güncellenir.
 - İkinci bir tarayıcı sekmesinde ~5 sn içinde aynı değişiklik görünür.
+
+  Not: binding'ler `initOpenNextCloudflareForDev()` sayesinde `next dev`'de
+  çalışır. Sorun olursa `npm run preview` (wrangler dev) ile de doğrulanabilir.
 
 - [ ] **Step 4: Commit**
 
@@ -1375,19 +1504,20 @@ git commit -m "docs: add setup and deployment guide"
 
 ## Self-Review (plan yazarı tarafından yapıldı)
 
-**Spec kapsam kontrolü:**
+**Spec kapsam kontrolü (2026-07-20 Cloudflare/TS7 revizyonu):**
 - 4 parametre (oda_no, durum, fatura_kesildi, fiyat) → Task 2 şema + Task 3 model ✓
 - 101–115 sabit + seed → Task 2 `schema.sql` ✓
 - Web (telefon + bilgisayar), grid + responsive → Task 7 `auto-fill minmax` ✓
-- Ortak bulut, çok kullanıcı → Cloudflare D1 (Task 2) ✓
+- Ortak bulut, çok kullanıcı → Cloudflare D1 binding (Task 1B + Task 2) ✓
 - Canlı senkron (~5 sn polling) → Task 7 `setInterval` ✓
 - PIN girişi → Task 4 (auth) + Task 5 (login route) + Task 6 (form) ✓
-- Gizli anahtar tarayıcıda yok → sunucu-taraflı env, Task 2/4/5 ✓
-- Source map kapalı → Task 1 next.config + Task 8 doğrulama ✓
+- Secret'lar tarayıcıda yok, binding env'inde → Task 1B/2/4 (`getEnv`) ✓
+- Source map kapalı → Task 1B next.config + Task 8 doğrulama ✓
 - CORS yok (kendi /api) → Task 5/7 ✓
-- Vercel + D1 REST → Task 2 + Task 8 ✓
+- Cloudflare Workers (OpenNext) + D1 binding → Task 1B + Task 2 + Task 8 ✓
+- TS7 → Task 1B ✓
 - Geçmiş yok, oda ekle/sil yok → sadece GET + PATCH, kapsam dışı korundu ✓
 
-**Placeholder taraması:** Kod adımlarının tümü tam içerik içeriyor; "TBD/TODO" yok.
+**Placeholder taraması:** Kod adımlarının tümü tam içerik içeriyor; tek bilinçli yer tutucu `wrangler.jsonc` → `database_id` ("REPLACE_AFTER_D1_CREATE"), Task 8'de gerçek değerle doldurulur.
 
-**Tip tutarlılığı:** `Room`, `RoomPatch`, `Durum` Task 3'te tanımlı; Task 5/7'de aynı isimlerle kullanılıyor. `SESSION_COOKIE`, `isAuthed`, `expectedToken`, `checkPin` Task 4'te tanımlı; Task 5'te aynı imzalarla tüketiliyor. `getAllRooms`, `updateRoom`, `validateRoomPatch` Task 3 → Task 5 tutarlı. `d1Query` Task 2 → Task 3 tutarlı.
+**Tip tutarlılığı:** `AppEnv`/`getEnv` Task 2'de (`env.ts`) tanımlı; `d1.ts` ve `auth.ts` (Task 4) tüketir. `Room`, `RoomPatch`, `Durum` Task 3'te tanımlı; Task 5/7'de aynı isimlerle kullanılıyor. `SESSION_COOKIE`, `isAuthed`, `expectedToken`, `checkPin` Task 4'te tanımlı; Task 5'te aynı imzalarla tüketiliyor. `getAllRooms`, `updateRoom`, `validateRoomPatch` Task 3 → Task 5 tutarlı. `d1Query` Task 2 → Task 3 tutarlı.
