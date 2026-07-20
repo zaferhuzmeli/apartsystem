@@ -44,7 +44,10 @@ describe("auth", () => {
     expect(await isAuthed("cop", now)).toBe(false);
     const [issuedAt, mac] = token.split(".");
     expect(await isAuthed(`${issuedAt}.deadbeef`, now)).toBe(false);
+    // timestamp'i geleceğe kaydırma -> expiry guard reddeder
     expect(await isAuthed(`${Number(issuedAt) + 1}.${mac}`, now)).toBe(false);
+    // timestamp'i geçmişe (pencere içi) kaydırma -> MAC artık uyuşmaz (MAC timestamp'e bağlı)
+    expect(await isAuthed(`${Number(issuedAt) - 1000}.${mac}`, now)).toBe(false);
   });
 
   it("süresi dolmuş token reddedilir, sınır içindeki kabul edilir", async () => {
