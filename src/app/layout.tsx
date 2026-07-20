@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Apart Oda Takip",
+  title: "Maviasya",
   description: "Erdemli apart oda takip sistemi",
 };
 

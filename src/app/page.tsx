@@ -1,3 +1,3 @@
 export default function Home() {
-  return <h1>Apart Oda Takip</h1>;
+  return <h1>Maviasya</h1>;
 }

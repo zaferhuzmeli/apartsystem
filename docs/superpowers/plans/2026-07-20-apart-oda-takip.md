@@ -1,4 +1,4 @@
-# Apart Oda Takip Sistemi — İmplementasyon Planı
+# Maviasya Sistemi — İmplementasyon Planı
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -193,7 +193,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Apart Oda Takip",
+  title: "Maviasya",
   description: "Erdemli apart oda takip sistemi",
 };
 
@@ -220,7 +220,7 @@ body {
 `src/app/page.tsx` (geçici):
 ```tsx
 export default function Home() {
-  return <h1>Apart Oda Takip</h1>;
+  return <h1>Maviasya</h1>;
 }
 ```
 
@@ -228,7 +228,7 @@ export default function Home() {
 
 `src/lib/health.ts`:
 ```ts
-export const APP_NAME = "Apart Oda Takip";
+export const APP_NAME = "Maviasya";
 ```
 
 `src/lib/health.test.ts`:
@@ -238,7 +238,7 @@ import { APP_NAME } from "@/lib/health";
 
 describe("health", () => {
   it("uygulama adını export eder", () => {
-    expect(APP_NAME).toBe("Apart Oda Takip");
+    expect(APP_NAME).toBe("Maviasya");
   });
 });
 ```
@@ -254,7 +254,7 @@ Expected: `health.test.ts` PASS. (Kurulumda TS 7 stabil değilse `pnpm install t
 
 - [ ] **Step 9: Dev sunucusu ile manuel doğrula**
 
-Run: `pnpm dev` → tarayıcıda `http://localhost:3000` → "Apart Oda Takip" başlığı görünür. Ctrl+C ile kapat.
+Run: `pnpm dev` → tarayıcıda `http://localhost:3000` → "Maviasya" başlığı görünür. Ctrl+C ile kapat.
 
 - [ ] **Step 10: Commit**
 
@@ -343,7 +343,7 @@ export default defineCloudflareConfig();
 ```jsonc
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "apart-oda-takip",
+  "name": "maviasya",
   "main": ".open-next/worker.js",
   "compatibility_date": "2024-12-30",
   "compatibility_flags": ["nodejs_compat"],
@@ -1087,7 +1087,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={submit} style={{ maxWidth: 280, margin: "80px auto", display: "grid", gap: 12 }}>
-      <h1 style={{ fontSize: 20 }}>Apart Oda Takip</h1>
+      <h1 style={{ fontSize: 20 }}>Maviasya</h1>
       <label htmlFor="pin">PIN</label>
       <input
         id="pin"
@@ -1364,7 +1364,7 @@ export default function Home() {
 
   return (
     <main style={{ maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 22, margin: "8px 0 16px" }}>Apart Oda Takip</h1>
+      <h1 style={{ fontSize: 22, margin: "8px 0 16px" }}>Maviasya</h1>
       <div
         style={{
           display: "grid",
@@ -1415,7 +1415,7 @@ git commit -m "feat: add room grid, card, editor and polling UI"
 
 `README.md`:
 ````markdown
-# Apart Oda Takip
+# Maviasya
 
 Erdemli apartının 101–115 odalarını (durum, fatura, fiyat) takip eden
 Next.js uygulaması. `@opennextjs/cloudflare` ile Cloudflare Workers'ta

@@ -1,4 +1,6 @@
-# Apart Oda Takip Sistemi — Tasarım Dokümanı
+# Maviasya — Apart Oda Takip Sistemi — Tasarım Dokümanı
+
+**Uygulama adı / marka:** Maviasya (kullanıcıya görünen tüm başlıklar). Worker adı: `maviasya`. D1 db adı (teknik): `apart-oda`.
 
 **Tarih:** 2026-07-20
 **Konum/İşletme:** Erdemli apart (101–115 odalar)
