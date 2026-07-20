@@ -5,3 +5,7 @@ node_modules
 .DS_Store
 coverage
 *.tsbuildinfo
+docs/superpowers/
+.open-next
+.dev.vars
+.wrangler
