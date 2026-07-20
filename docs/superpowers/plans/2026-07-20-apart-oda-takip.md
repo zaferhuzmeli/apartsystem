@@ -12,7 +12,7 @@
 
 - **TypeScript 7** (native compiler, GA 2026-07-08). `tsconfig` her zaman `"strict": true`. TS7'yi engelleyen `vite-tsconfig-paths` kaldırılır; `@/*` alias'ı vitest'te elle `resolve.alias` ile verilir.
 - **Node:** 20+.
-- **Paket yöneticisi:** npm.
+- **Paket yöneticisi:** **pnpm** (tüm komutlar pnpm ile). Task 1 npm ile kuruldu; Task 1B `package-lock.json`'ı silip `pnpm install` ile `pnpm-lock.yaml`'a geçer. Kurulum: `pnpm add -D <pkg>`; script: `pnpm <script>`; bin: `pnpm exec <bin>`.
 - **Source map:** production'da kapalı — `next.config.ts` içinde `productionBrowserSourceMaps: false`.
 - **D1 erişimi:** yalnızca Cloudflare D1 **binding** (`getCloudflareContext().env.DB`). REST API / API token YOK.
 - **Secret'lar:** `APP_PIN` yalnızca Cloudflare binding env'inde (`getCloudflareContext().env.APP_PIN`) — `process.env`'de değil, tarayıcıda değil. Yerelde `.dev.vars`, production'da `wrangler secret`. `NEXT_PUBLIC_*` değişkeni yoktur.
@@ -72,7 +72,7 @@ apartsystem/
 
 **Interfaces:**
 - Consumes: (yok)
-- Produces: `@/*` import alias `src/`'e işaret eder; `npm test` (vitest) ve `npm run dev` çalışır.
+- Produces: `@/*` import alias `src/`'e işaret eder; `pnpm test` (vitest) ve `pnpm dev` çalışır.
 
 - [ ] **Step 1: package.json oluştur**
 
@@ -247,14 +247,14 @@ describe("health", () => {
 
 Run:
 ```bash
-npm install
-npm test
+pnpm install
+pnpm test
 ```
-Expected: `health.test.ts` PASS. (Kurulumda TS 7 stabil değilse `npm install typescript@latest` ile 5.x'e düşülür — Global Constraints.)
+Expected: `health.test.ts` PASS. (Kurulumda TS 7 stabil değilse `pnpm install typescript@latest` ile 5.x'e düşülür — Global Constraints.)
 
 - [ ] **Step 9: Dev sunucusu ile manuel doğrula**
 
-Run: `npm run dev` → tarayıcıda `http://localhost:3000` → "Apart Oda Takip" başlığı görünür. Ctrl+C ile kapat.
+Run: `pnpm dev` → tarayıcıda `http://localhost:3000` → "Apart Oda Takip" başlığı görünür. Ctrl+C ile kapat.
 
 - [ ] **Step 10: Commit**
 
@@ -271,22 +271,28 @@ Task 1 iskeleti Vercel + TS 5.9.3 varsayımıyla kuruldu. Bu task onu Cloudflare
 
 **Files:**
 - Modify: `package.json` (scriptler + bağımlılıklar), `next.config.ts`, `vitest.config.ts`, `.gitignore`
-- Create: `open-next.config.ts`, `wrangler.jsonc`, `.dev.vars.example`, `.dev.vars` (gitignored), `worker-configuration.d.ts` (üretilir)
-- Remove dep: `vite-tsconfig-paths`
+- Create: `open-next.config.ts`, `wrangler.jsonc`, `.dev.vars.example`, `.dev.vars` (gitignored), `worker-configuration.d.ts` (üretilir), `pnpm-lock.yaml`
+- Remove: `vite-tsconfig-paths` (dep), `package-lock.json` (npm → pnpm geçişi)
 
 **Interfaces:**
 - Consumes: (Task 1 iskeleti)
-- Produces: `getCloudflareContext()` sunucu kodunda kullanılabilir; `@/*` alias'ı vitest'te `resolve.alias` ile çalışır; `npm run deploy` / `npm run preview` / `npm run cf-typegen` scriptleri.
+- Produces: `getCloudflareContext()` sunucu kodunda kullanılabilir; `@/*` alias'ı vitest'te `resolve.alias` ile çalışır; `pnpm deploy` / `pnpm preview` / `pnpm cf-typegen` scriptleri.
 
-- [ ] **Step 1: vite-tsconfig-paths'i kaldır, OpenNext + TS7 + workers-types kur**
+- [ ] **Step 1: npm → pnpm geçişi + bağımlılıklar**
 
 Run:
 ```bash
-npm remove vite-tsconfig-paths
-npm install --save-dev @opennextjs/cloudflare wrangler @cloudflare/workers-types
-npm install --save-dev typescript@7
+rm -f package-lock.json
+pnpm import 2>/dev/null || true   # varsa package-lock'tan pnpm-lock üret (opsiyonel)
+pnpm install                      # node_modules + pnpm-lock.yaml
+pnpm remove vite-tsconfig-paths
+pnpm add -D @opennextjs/cloudflare wrangler @cloudflare/workers-types
+pnpm add -D typescript@7
 ```
-TS7 dağıtım etiketi/CLI adı farklıysa (ör. native binary `tsgo`), somut sürümü çöz ve raporla; kurulamıyorsa Global Constraints gereği en güncel TS'e düş ve nedenini raporla. Beklenen: `typescript` 7.x `package.json`'da.
+Notlar:
+- pnpm kurulu değilse `corepack enable pnpm` ile etkinleştir (Node 20+ ile gelir).
+- TS7 dağıtım etiketi/CLI adı farklıysa (ör. native binary `tsgo`), somut sürümü çöz ve raporla; kurulamıyorsa Global Constraints gereği en güncel TS'e düş ve nedenini raporla. Beklenen: `typescript` 7.x `package.json`'da.
+- Sonuçta `package-lock.json` gitmiş, `pnpm-lock.yaml` gelmiş olmalı.
 
 - [ ] **Step 2: vitest.config.ts — plugin yerine elle alias**
 
@@ -378,15 +384,15 @@ APP_PIN=1234
 
 - [ ] **Step 8: Tipleri üret**
 
-Run: `npm run cf-typegen`
+Run: `pnpm cf-typegen`
 Expected: `worker-configuration.d.ts` üretilir (D1 binding `DB` için global tipler). Not: `APP_PIN` bir secret olduğu için üretilen tipe girmez; `src/lib/env.ts` (Task 2) kendi `AppEnv` arayüzünde `APP_PIN`'i tanımlar.
 
 - [ ] **Step 9: Testler hâlâ geçiyor + tip kontrolü**
 
 Run:
 ```bash
-npm test
-npx tsc --noEmit   # veya TS7 native CLI (ör. tsgo --noEmit)
+pnpm test
+pnpm exec tsc --noEmit   # veya TS7 native CLI (ör. tsgo --noEmit)
 ```
 Expected: `health.test.ts` PASS (yeni alias ile), tip kontrolü temiz.
 
@@ -472,7 +478,7 @@ describe("d1Query", () => {
 
 - [ ] **Step 3: Testi çalıştır, FAIL doğrula**
 
-Run: `npm test -- d1`
+Run: `pnpm test d1`
 Expected: FAIL ("d1Query is not a function" / modül yok).
 
 - [ ] **Step 4: d1.ts implement et**
@@ -492,7 +498,7 @@ export async function d1Query<T = Record<string, unknown>>(
 
 - [ ] **Step 5: Testi çalıştır, PASS doğrula**
 
-Run: `npm test -- d1`
+Run: `pnpm test d1`
 Expected: 2 test PASS.
 
 - [ ] **Step 6: schema.sql oluştur**
@@ -602,7 +608,7 @@ describe("updateRoom", () => {
 
 - [ ] **Step 2: Testi çalıştır, FAIL doğrula**
 
-Run: `npm test -- rooms`
+Run: `pnpm test rooms`
 Expected: FAIL (modül/fonksiyon yok).
 
 - [ ] **Step 3: rooms.ts implement et**
@@ -687,7 +693,7 @@ export async function updateRoom(oda_no: number, patch: RoomPatch): Promise<void
 
 - [ ] **Step 4: Testi çalıştır, PASS doğrula**
 
-Run: `npm test -- rooms`
+Run: `pnpm test rooms`
 Expected: tüm testler PASS.
 
 - [ ] **Step 5: Commit**
@@ -764,7 +770,7 @@ describe("auth", () => {
 
 - [ ] **Step 2: Testi çalıştır, FAIL doğrula**
 
-Run: `npm test -- auth`
+Run: `pnpm test auth`
 Expected: FAIL.
 
 - [ ] **Step 3: auth.ts implement et**
@@ -813,7 +819,7 @@ export async function isAuthed(token: string | undefined): Promise<boolean> {
 
 - [ ] **Step 4: Testi çalıştır, PASS doğrula**
 
-Run: `npm test -- auth`
+Run: `pnpm test auth`
 Expected: tüm testler PASS.
 
 - [ ] **Step 5: Commit**
@@ -991,7 +997,7 @@ describe("PATCH /api/rooms/[oda_no]", () => {
 
 - [ ] **Step 5: Testleri çalıştır, PASS doğrula**
 
-Run: `npm test -- rooms-api`
+Run: `pnpm test rooms-api`
 Expected: tüm testler PASS. (Not: `NextRequest` testleri Node ortamı gerektirebilir; hata olursa test dosyasının en üstüne `// @vitest-environment node` ekle.)
 
 - [ ] **Step 6: Commit**
@@ -1046,7 +1052,7 @@ describe("LoginForm", () => {
 
 - [ ] **Step 2: Testi çalıştır, FAIL doğrula**
 
-Run: `npm test -- LoginForm`
+Run: `pnpm test LoginForm`
 Expected: FAIL.
 
 - [ ] **Step 3: LoginForm implement et**
@@ -1106,7 +1112,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 - [ ] **Step 4: Testi çalıştır, PASS doğrula**
 
-Run: `npm test -- LoginForm`
+Run: `pnpm test LoginForm`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -1163,7 +1169,7 @@ describe("RoomCard", () => {
 
 - [ ] **Step 2: Testi çalıştır, FAIL doğrula**
 
-Run: `npm test -- RoomCard`
+Run: `pnpm test RoomCard`
 Expected: FAIL.
 
 - [ ] **Step 3: RoomCard implement et**
@@ -1218,7 +1224,7 @@ export function RoomCard({ room, onClick }: { room: Room; onClick: () => void })
 
 - [ ] **Step 4: Testi çalıştır, PASS doğrula**
 
-Run: `npm test -- RoomCard`
+Run: `pnpm test RoomCard`
 Expected: PASS.
 
 - [ ] **Step 5: RoomEditor implement et (test opsiyonel, manuel doğrulanacak)**
@@ -1384,7 +1390,7 @@ export default function Home() {
 
 - [ ] **Step 7: Tüm testleri çalıştır**
 
-Run: `npm test`
+Run: `pnpm test`
 Expected: tüm testler PASS.
 
 - [ ] **Step 8: Commit**
@@ -1418,10 +1424,10 @@ Next.js uygulaması. `@opennextjs/cloudflare` ile Cloudflare Workers'ta
 ## Yerel geliştirme
 
 ```bash
-npm install
+pnpm install
 cp .dev.vars.example .dev.vars          # APP_PIN'i ayarla
-npx wrangler d1 execute apart-oda --local --file=schema.sql   # yerel D1'e şema
-npm run dev
+pnpm exec wrangler d1 execute apart-oda --local --file=schema.sql   # yerel D1'e şema
+pnpm dev
 ```
 
 ## Cloudflare kurulumu
@@ -1429,23 +1435,23 @@ npm run dev
 1. Cloudflare hesabı aç (ücretsiz).
 2. D1 veritabanı oluştur:
    ```bash
-   npx wrangler d1 create apart-oda
+   pnpm exec wrangler d1 create apart-oda
    ```
    Çıktıdaki `database_id`'yi `wrangler.jsonc` → `d1_databases[0].database_id`
    alanına yaz.
 3. Şemayı uzak D1'e uygula:
    ```bash
-   npx wrangler d1 execute apart-oda --remote --file=schema.sql
+   pnpm exec wrangler d1 execute apart-oda --remote --file=schema.sql
    ```
 4. PIN secret'ını gir:
    ```bash
-   npx wrangler secret put APP_PIN
+   pnpm exec wrangler secret put APP_PIN
    ```
 
 ## Deploy
 
 ```bash
-npm run deploy        # opennextjs-cloudflare build && wrangler deploy
+pnpm deploy        # opennextjs-cloudflare build && wrangler deploy
 ```
 Verilen `*.workers.dev` URL'ini telefonda/bilgisayarda aç, PIN ile gir.
 
@@ -1470,7 +1476,7 @@ Kodda ikisi de `getCloudflareContext().env` üzerinden okunur (bkz. `src/lib/env
 
 Run:
 ```bash
-npm run build
+pnpm build
 ```
 Expected: `next build` başarılı. Tarayıcı chunk'ları için `.js.map` üretilmediğini teyit et:
 ```bash
@@ -1482,7 +1488,7 @@ Expected: çıktı boş (source map yok).
 
 `.dev.vars` (APP_PIN) dolu ve yerel D1 şeması uygulanmış halde:
 ```bash
-npm run dev
+pnpm dev
 ```
 - `http://localhost:3000` → PIN ekranı gelir.
 - Yanlış PIN → "PIN hatalı".
@@ -1491,7 +1497,7 @@ npm run dev
 - İkinci bir tarayıcı sekmesinde ~5 sn içinde aynı değişiklik görünür.
 
   Not: binding'ler `initOpenNextCloudflareForDev()` sayesinde `next dev`'de
-  çalışır. Sorun olursa `npm run preview` (wrangler dev) ile de doğrulanabilir.
+  çalışır. Sorun olursa `pnpm preview` (wrangler dev) ile de doğrulanabilir.
 
 - [ ] **Step 4: Commit**
 
