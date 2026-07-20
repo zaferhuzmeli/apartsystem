@@ -6,11 +6,11 @@
 
 **Architecture:** Tek bir Next.js (App Router) projesi, `@opennextjs/cloudflare` ile Cloudflare Workers'ta çalışır. Frontend + API aynı repoda; API route'ları sunucu tarafında D1'e **doğrudan binding** (`getCloudflareContext().env.DB`) ile bağlanır — REST/token yok. Frontend kendi `/api` route'larını çağırır (CORS yok, gizli anahtar tarayıcıya düşmez). Basit PIN + HttpOnly çerez ile giriş. `wrangler` ile Cloudflare'e deploy edilir.
 
-**Tech Stack:** Next.js (App Router), React, TypeScript 7, `@opennextjs/cloudflare`, Cloudflare Workers + D1 (binding), Vitest + Testing Library, wrangler.
+**Tech Stack:** Next.js (App Router), React, TypeScript 6, `@opennextjs/cloudflare`, Cloudflare Workers + D1 (binding), Vitest + Testing Library, wrangler.
 
 ## Global Constraints
 
-- **TypeScript 7** (native compiler, GA 2026-07-08). `tsconfig` her zaman `"strict": true`. TS7'yi engelleyen `vite-tsconfig-paths` kaldırılır; `@/*` alias'ı vitest'te elle `resolve.alias` ile verilir.
+- **TypeScript 6** (klasik derleyici, en güncel 6.x). TS7 (native/Go) şu an Next build'iyle **çalışmıyor** — klasik Compiler API'sini (`typescript/lib/typescript.js`) içermiyor, Next build onu zorunlu istiyor; stabil programatik API 7.1'e (~Ekim 2026) kadar yok. TS7'ye 7.1 çıkınca yükseltilecek. TS6 Next ile çalışmazsa 5.9.3'e düş. `tsconfig` her zaman `"strict": true`; `vite-tsconfig-paths` kaldırılır, `@/*` alias'ı vitest'te `resolve.alias` ile verilir.
 - **Node:** 20+.
 - **Paket yöneticisi:** **pnpm** (tüm komutlar pnpm ile). Task 1 npm ile kuruldu; Task 1B `package-lock.json`'ı silip `pnpm install` ile `pnpm-lock.yaml`'a geçer. Kurulum: `pnpm add -D <pkg>`; script: `pnpm <script>`; bin: `pnpm exec <bin>`.
 - **Source map:** production'da kapalı — `next.config.ts` içinde `productionBrowserSourceMaps: false`.
