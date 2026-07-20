@@ -8,7 +8,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "apart-oda",
+      "database_name": "apartsystem",
       "database_id": "REPLACE_AFTER_D1_CREATE"
     }
   ]
