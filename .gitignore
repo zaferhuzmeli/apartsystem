@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# OpenNext / Cloudflare
+.open-next/
+.wrangler/
+worker-configuration.d.ts
+
+# local env
+.env
+.env*.local
+.dev.vars
+
+# tests and build metadata
+coverage/
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# local agent/tooling state
+.claude/
+.remember/
+.superpowers/
+docs/superpowers/
+.playwright-mcp/

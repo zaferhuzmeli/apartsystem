@@ -1,4 +1,6 @@
-# Apart Oda Takip Sistemi — Tasarım Dokümanı
+# Maviasya — Apart Oda Takip Sistemi — Tasarım Dokümanı
+
+**Uygulama adı / marka:** Maviasya (kullanıcıya görünen tüm başlıklar). Worker adı: `maviasya`. D1 db adı (teknik): `apart-oda`.
 
 **Tarih:** 2026-07-20
 **Konum/İşletme:** Erdemli apart (101–115 odalar)
@@ -26,25 +28,27 @@ Cloudflare D1.
 [Tarayıcı: Next.js sayfası]
         │  (kendi /api route'ları — CORS yok)
         ▼
-[Next.js API routes  @ Vercel (sunucu tarafı)]
-        │  Cloudflare D1 REST API (API token env'de)
+[Next.js API routes  @ Cloudflare Workers (OpenNext, sunucu tarafı)]
+        │  D1 binding (getCloudflareContext().env.DB) — REST/token YOK
         ▼
 [Cloudflare D1  (SQLite) — rooms tablosu]
 ```
 
 ### Teknoloji
 
-- **Next.js (App Router) + TypeScript 7**
-  - TS 7 (native compiler) kullanılır; kurulum anında mevcut değilse en
-    güncel TypeScript 5.x'e düşülür (kararı implementasyonda net veririz).
-- **Barındırma:** Vercel (GitHub'a bağlanınca otomatik deploy)
-- **Veritabanı:** Cloudflare D1
-- **D1 erişimi:** Next.js API route'larından Cloudflare **D1 REST API**
-  (`/accounts/{account_id}/d1/database/{database_id}/query`) ile. Ayrı bir
-  Cloudflare Worker deploy edilmez.
-  - *Yedek plan:* D1 REST API bir engel çıkarırsa, D1'in önüne küçük bir
-    Cloudflare Worker konur ve Next.js o Worker'ı çağırır. Sözleşme
-    (endpoint'ler) aynı kalır, yalnızca arka uç değişir.
+- **Next.js (App Router) + TypeScript 7** (native compiler, GA 2026-07-08).
+  - TS 7'yi engelleyen `vite-tsconfig-paths` test eklentisi kaldırılır;
+    `@/*` alias'ı vitest'te elle tanımlanır.
+- **Barındırma:** Cloudflare Workers, `@opennextjs/cloudflare` adaptörü ile
+  (`npm run deploy` → `opennextjs-cloudflare build` + `wrangler deploy`).
+- **Veritabanı:** Cloudflare D1.
+- **D1 erişimi:** Doğrudan **D1 binding** — sunucu kodunda
+  `getCloudflareContext().env.DB` üzerinden `prepare().bind().all()`.
+  Cloudflare API token veya REST çağrısı YOKTUR. Yerel geliştirmede
+  `initOpenNextCloudflareForDev()` bindingleri `next dev`'e bağlar; D1'in
+  yerel (miniflare) kopyası kullanılır.
+- **Tipler:** `wrangler types --env-interface CloudflareEnv` ile
+  `worker-configuration.d.ts` üretilir (D1Database, APP_PIN tipli erişim).
 
 ## 3. Veri Modeli
 
@@ -86,12 +90,13 @@ Yalnızca bu iki uç yeterli (oda ekleme/silme yok; 15 oda sabit).
 
 ## 6. Güvenlik
 
-- **Gizli anahtar yok (frontend):** Cloudflare API token ve PIN secret
-  yalnızca **Vercel sunucu-taraflı env** değişkenlerinde. Tarayıcıya
+- **Gizli anahtar yok (frontend):** PIN secret yalnızca **Cloudflare
+  binding env**'inde (`getCloudflareContext().env.APP_PIN`) — `process.env`'de
+  değil, tarayıcıda hiç değil. D1 için ayrı token yok (binding). Tarayıcıya
   hiçbir gizli değer düşmez.
 - **PIN girişi:** Sayfa herkese açık olmasın diye basit bir PIN. Kullanıcı
-  PIN'i girer → API route Vercel env'indeki `APP_PIN` ile doğrular →
-  başarılıysa bir oturum çerezi/token verilir; sonraki isteklerde kontrol
+  PIN'i girer → API route binding'deki `APP_PIN` ile doğrular →
+  başarılıysa HttpOnly oturum çerezi verilir; sonraki isteklerde kontrol
   edilir.
 - **Kaynak güvenliği:** production build minify edilir, **source map
   kapalı** (`productionBrowserSourceMaps: false`) — kaynak kod okunaklı
@@ -99,14 +104,17 @@ Yalnızca bu iki uç yeterli (oda ekleme/silme yok; 15 oda sabit).
 - **CORS:** Frontend kendi `/api` route'larını çağırdığı için cross-origin
   yok; harici erişime kapalı.
 
-## 7. Ortam Değişkenleri (env)
+## 7. Ortam Değişkenleri / Bindingler
 
-Vercel'de (sunucu tarafı, gizli):
-
-- `CF_ACCOUNT_ID` — Cloudflare hesap ID
-- `CF_D1_DATABASE_ID` — D1 veritabanı ID
-- `CF_API_TOKEN` — D1'e erişim için Cloudflare API token (dar yetkili)
-- `APP_PIN` — giriş PIN'i
+- **D1 binding** `DB` — `wrangler.jsonc`'te tanımlı (database_name `apartsystem`
+  + database_id). Token yok.
+- **`APP_PIN`** — giriş PIN'i (secret). Yerelde `.dev.vars` dosyasında;
+  production'da `wrangler secret put APP_PIN` (veya Cloudflare dashboard).
+- **`SESSION_SECRET`** — oturum token'ını imzalayan yüksek-entropili secret
+  (PIN'den ayrı). Yerelde `.dev.vars`, production'da `wrangler secret`.
+  Token = `<issuedAt>.HMAC(SESSION_SECRET, issuedAt)` + 30 gün expiry; böylece
+  sızan çerezden PIN çıkarılamaz ve süresiz replay olmaz.
+- Üçü de kodda `getCloudflareContext().env` üzerinden okunur.
 
 ## 8. Kapsam Dışı (YAGNI)
 
@@ -119,10 +127,11 @@ Vercel'de (sunucu tarafı, gizli):
 
 Kullanıcının yapacakları (adım adım yönlendirilecek):
 
-1. Cloudflare hesabı + D1 veritabanı oluştur, dar yetkili API token al.
-2. Vercel hesabı + GitHub bağlantısı.
-3. Env değişkenlerini Vercel'e gir.
-4. Deploy.
+1. Cloudflare hesabı aç.
+2. `wrangler d1 create apart-oda` → çıkan `database_id`'yi `wrangler.jsonc`'e yaz.
+3. Şemayı uygula: `wrangler d1 execute apart-oda --remote --file=schema.sql`.
+4. PIN secret'ını gir: `wrangler secret put APP_PIN`.
+5. `npm run deploy` → Cloudflare Workers'a yayınla.
 
 ## 10. Başarı Kriteri
 
