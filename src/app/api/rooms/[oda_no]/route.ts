@@ -17,11 +17,16 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => null);
+  let patch;
   try {
-    const patch = validateRoomPatch(body);
-    await updateRoom(n, patch);
+    patch = validateRoomPatch(body);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+  }
+  try {
+    await updateRoom(n, patch);
+  } catch {
+    return NextResponse.json({ error: "Sunucu hatası, kaydedilemedi" }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

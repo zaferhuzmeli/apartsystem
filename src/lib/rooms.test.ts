@@ -28,6 +28,12 @@ describe("validateRoomPatch", () => {
   it("obje olmayan girdiyi reddeder", () => {
     expect(() => validateRoomPatch(null)).toThrow(/geçersiz/i);
   });
+  it("dizi girdiyi reddeder", () => {
+    expect(() => validateRoomPatch([])).toThrow(/geçersiz/i);
+  });
+  it("sonsuz fiyatı reddeder", () => {
+    expect(() => validateRoomPatch({ fiyat: Infinity })).toThrow(/fiyat/);
+  });
 });
 
 describe("getAllRooms", () => {

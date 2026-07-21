@@ -19,6 +19,9 @@ export function validateRoomPatch(input: unknown): RoomPatch {
   if (typeof input !== "object" || input === null) {
     throw new Error("Geçersiz veri");
   }
+  if (Array.isArray(input)) {
+    throw new Error("Geçersiz veri");
+  }
   const o = input as Record<string, unknown>;
   const patch: RoomPatch = {};
 
@@ -35,7 +38,7 @@ export function validateRoomPatch(input: unknown): RoomPatch {
     patch.fatura_kesildi = o.fatura_kesildi;
   }
   if (o.fiyat !== undefined) {
-    if (typeof o.fiyat !== "number" || Number.isNaN(o.fiyat) || o.fiyat < 0) {
+    if (typeof o.fiyat !== "number" || !Number.isFinite(o.fiyat) || o.fiyat < 0) {
       throw new Error("fiyat 0 veya daha büyük bir sayı olmalı");
     }
     patch.fiyat = o.fiyat;

@@ -20,8 +20,12 @@ export default function Home() {
         setAuthed(false);
         return;
       }
+      if (!res.ok) {
+        setLoadError(true);
+        return;
+      }
       const json = (await res.json()) as { rooms: Room[] };
-      setRooms(json.rooms);
+      setRooms(json.rooms ?? []);
       setAuthed(true);
       setLoadError(false);
     } catch {
