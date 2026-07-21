@@ -38,12 +38,13 @@ export default function Home() {
 
   async function saveRoom(oda_no: number, patch: RoomPatch) {
     try {
-      await fetch(`/api/rooms/${oda_no}`, {
+      const res = await fetch(`/api/rooms/${oda_no}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      setSaveError(false);
+      // Ağ hatası değil ama sunucu reddettiyse (400/401) de sessizce başarı sayma
+      setSaveError(!res.ok);
       await load();
     } catch {
       // Kayıt sırasında bağlantı hatası: kullanıcıyı bilgilendir, arayüzü kilitleme
@@ -51,7 +52,25 @@ export default function Home() {
     }
   }
 
-  if (authed === null) return <p style={{ textAlign: "center", marginTop: 80 }}>Yükleniyor…</p>;
+  if (authed === null) {
+    return (
+      <div style={{ textAlign: "center", marginTop: 80 }}>
+        {loadError ? (
+          <>
+            <p style={{ color: "#dc2626", marginBottom: 12 }}>Bağlantı hatası.</p>
+            <button
+              onClick={() => load()}
+              style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff" }}
+            >
+              Tekrar dene
+            </button>
+          </>
+        ) : (
+          <p>Yükleniyor…</p>
+        )}
+      </div>
+    );
+  }
   if (!authed) return <LoginForm onSuccess={load} />;
 
   return (
@@ -64,7 +83,7 @@ export default function Home() {
       )}
       {saveError && (
         <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>
-          Kaydetme sırasında bağlantı hatası oluştu, tekrar deneyin.
+          Kaydedilemedi, tekrar deneyin.
         </p>
       )}
       <div
