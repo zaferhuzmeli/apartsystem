@@ -37,3 +37,4 @@ pnpm-debug.log*
 .remember/
 .superpowers/
 docs/superpowers/
+.playwright-mcp/

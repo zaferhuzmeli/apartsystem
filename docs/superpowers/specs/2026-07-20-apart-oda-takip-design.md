@@ -106,11 +106,15 @@ Yalnızca bu iki uç yeterli (oda ekleme/silme yok; 15 oda sabit).
 
 ## 7. Ortam Değişkenleri / Bindingler
 
-- **D1 binding** `DB` — `wrangler.jsonc`'te tanımlı (database_name +
-  database_id). Token yok.
+- **D1 binding** `DB` — `wrangler.jsonc`'te tanımlı (database_name `apartsystem`
+  + database_id). Token yok.
 - **`APP_PIN`** — giriş PIN'i (secret). Yerelde `.dev.vars` dosyasında;
   production'da `wrangler secret put APP_PIN` (veya Cloudflare dashboard).
-  Kodda `getCloudflareContext().env.APP_PIN` ile okunur.
+- **`SESSION_SECRET`** — oturum token'ını imzalayan yüksek-entropili secret
+  (PIN'den ayrı). Yerelde `.dev.vars`, production'da `wrangler secret`.
+  Token = `<issuedAt>.HMAC(SESSION_SECRET, issuedAt)` + 30 gün expiry; böylece
+  sızan çerezden PIN çıkarılamaz ve süresiz replay olmaz.
+- Üçü de kodda `getCloudflareContext().env` üzerinden okunur.
 
 ## 8. Kapsam Dışı (YAGNI)
 

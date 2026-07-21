@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 
+const MAX = 8;
+
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!pin || loading) return;
     setLoading(true);
     setError("");
     try {
@@ -21,6 +24,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         onSuccess();
       } else {
         setError("PIN hatalı");
+        setPin("");
       }
     } catch {
       setError("Bağlantı hatası, tekrar deneyin");
@@ -29,26 +33,65 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
+  const press = (d: string) => {
+    setError("");
+    setPin((p) => (p.length >= MAX ? p : p + d));
+  };
+  const back = () => {
+    setError("");
+    setPin((p) => p.slice(0, -1));
+  };
+  const clear = () => {
+    setError("");
+    setPin("");
+  };
+
   return (
-    <form onSubmit={submit} style={{ maxWidth: 280, margin: "80px auto", display: "grid", gap: 12 }}>
-      <h1 style={{ fontSize: 20 }}>Maviasya</h1>
-      <label htmlFor="pin">PIN</label>
-      <input
-        id="pin"
-        type="password"
-        inputMode="numeric"
-        value={pin}
-        onChange={(e) => setPin(e.target.value)}
-        style={{ padding: 10, fontSize: 16, borderRadius: 8, border: "1px solid #ccc" }}
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        style={{ padding: 10, fontSize: 16, borderRadius: 8, border: "none", background: "#2563eb", color: "#fff" }}
-      >
-        {loading ? "..." : "Giriş"}
-      </button>
-      {error && <p style={{ color: "#dc2626" }}>{error}</p>}
-    </form>
+    <div className="login-wrap">
+      <form className="login-card" onSubmit={submit}>
+        <div className="login-brand">
+          <div className="mark">Maviasya</div>
+          <div className="rule" />
+          <div className="sub">Erdemli apart · oda takip</div>
+        </div>
+
+        <input
+          id="pin"
+          aria-label="PIN"
+          className="login-display"
+          type="password"
+          inputMode="none"
+          autoComplete="off"
+          placeholder="••••"
+          value={pin}
+          onChange={(e) => {
+            setError("");
+            setPin(e.target.value.replace(/\D/g, "").slice(0, MAX));
+          }}
+        />
+
+        <div className="keypad">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+            <button type="button" key={n} className="key" onClick={() => press(String(n))}>
+              {n}
+            </button>
+          ))}
+          <button type="button" className="key key-util" onClick={clear} aria-label="Temizle">
+            C
+          </button>
+          <button type="button" className="key" onClick={() => press("0")}>
+            0
+          </button>
+          <button type="button" className="key key-util" onClick={back} aria-label="Sil">
+            ⌫
+          </button>
+        </div>
+
+        <button className="login-btn" type="submit" disabled={loading || !pin}>
+          {loading ? "..." : "Giriş"}
+        </button>
+        {error && <p className="login-error">{error}</p>}
+      </form>
+    </div>
   );
 }

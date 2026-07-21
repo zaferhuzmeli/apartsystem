@@ -40,8 +40,8 @@ describe("PATCH /api/rooms/[oda_no]", () => {
   beforeEach(() => vi.spyOn(auth, "isAuthed").mockResolvedValue(true));
   afterEach(() => vi.restoreAllMocks());
 
-  it("geçerli patch'te updateRoom çağırır", async () => {
-    const spy = vi.spyOn(rooms, "updateRoom").mockResolvedValue();
+  it("geçerli patch'te applyRoomPatch çağırır", async () => {
+    const spy = vi.spyOn(rooms, "applyRoomPatch").mockResolvedValue();
     const res = await PATCH(reqWithCookie("token", { durum: "dolu" }), {
       params: Promise.resolve({ oda_no: "101" }),
     });

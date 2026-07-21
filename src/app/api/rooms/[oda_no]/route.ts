@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, isAuthed } from "@/lib/auth";
-import { updateRoom, validateRoomPatch } from "@/lib/rooms";
+import { applyRoomPatch, validateRoomPatch } from "@/lib/rooms";
 
 export async function PATCH(
   req: NextRequest,
@@ -24,7 +24,7 @@ export async function PATCH(
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
   try {
-    await updateRoom(n, patch);
+    await applyRoomPatch(n, patch);
   } catch {
     return NextResponse.json({ error: "Sunucu hatası, kaydedilemedi" }, { status: 500 });
   }

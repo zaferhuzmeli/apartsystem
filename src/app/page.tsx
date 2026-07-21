@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Room, RoomPatch } from "@/lib/rooms";
 import { LoginForm } from "@/components/LoginForm";
 import { RoomCard } from "@/components/RoomCard";
 import { RoomEditor } from "@/components/RoomEditor";
+import { AppShell } from "@/components/AppShell";
+import { Sidebar, type RoomFilter } from "@/components/Sidebar";
 
 export default function Home() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selected, setSelected] = useState<Room | null>(null);
+  const [filter, setFilter] = useState<RoomFilter>("tumu");
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
@@ -29,7 +32,6 @@ export default function Home() {
       setAuthed(true);
       setLoadError(false);
     } catch {
-      // Ağ hatası: önceki oda listesini koru, sadece küçük bir uyarı göster
       setLoadError(true);
     }
   }, []);
@@ -40,6 +42,16 @@ export default function Home() {
     return () => clearInterval(id);
   }, [load]);
 
+  async function logout() {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // yine de yerel oturumu kapat
+    }
+    setRooms([]);
+    setAuthed(false);
+  }
+
   async function saveRoom(oda_no: number, patch: RoomPatch) {
     try {
       const res = await fetch(`/api/rooms/${oda_no}`, {
@@ -47,25 +59,31 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      // Ağ hatası değil ama sunucu reddettiyse (400/401) de sessizce başarı sayma
       setSaveError(!res.ok);
       await load();
     } catch {
-      // Kayıt sırasında bağlantı hatası: kullanıcıyı bilgilendir, arayüzü kilitleme
       setSaveError(true);
     }
   }
 
+  const visible = useMemo(
+    () =>
+      rooms.filter((r) => {
+        if (filter === "bos") return r.durum === "bos";
+        if (filter === "dolu") return r.durum === "dolu";
+        if (filter === "faturasiz") return r.durum === "dolu" && !r.fatura_kesildi;
+        return true;
+      }),
+    [rooms, filter],
+  );
+
   if (authed === null) {
     return (
-      <div style={{ textAlign: "center", marginTop: 80 }}>
+      <div className="center-state">
         {loadError ? (
           <>
-            <p style={{ color: "#dc2626", marginBottom: 12 }}>Bağlantı hatası.</p>
-            <button
-              onClick={() => load()}
-              style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff" }}
-            >
+            <p className="err">Bağlantı kurulamadı.</p>
+            <button className="btn btn-primary" onClick={() => load()}>
               Tekrar dene
             </button>
           </>
@@ -77,30 +95,57 @@ export default function Home() {
   }
   if (!authed) return <LoginForm onSuccess={load} />;
 
+  const filterLabel: Record<RoomFilter, string> = {
+    tumu: "Tüm odalar",
+    bos: "Boş odalar",
+    dolu: "Dolu odalar",
+    faturasiz: "Fatura bekleyen odalar",
+  };
+
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 22, margin: "8px 0 16px" }}>Maviasya</h1>
-      {loadError && (
-        <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>
-          Bağlantı hatası, son bilinen durum gösteriliyor.
-        </p>
-      )}
-      {saveError && (
-        <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>
-          Kaydedilemedi, tekrar deneyin.
-        </p>
-      )}
-      <div
-        style={{
-          display: "grid",
-          gap: 12,
-          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-        }}
+    <>
+      <AppShell
+        sidebar={(close) => (
+          <Sidebar
+            rooms={rooms}
+            filter={filter}
+            onFilter={(f) => {
+              setFilter(f);
+              close();
+            }}
+            onSelectRoom={(r) => {
+              setSelected(r);
+              close();
+            }}
+            onLogout={logout}
+          />
+        )}
       >
-        {rooms.map((room) => (
-          <RoomCard key={room.oda_no} room={room} onClick={() => setSelected(room)} />
-        ))}
-      </div>
+        <div className="main-head">
+          <h1>{filterLabel[filter]}</h1>
+          <span className="sub mono">{visible.length} oda</span>
+        </div>
+
+        {loadError && (
+          <div className="banner banner-warn">
+            Bağlantı hatası — son bilinen durum gösteriliyor.
+          </div>
+        )}
+        {saveError && (
+          <div className="banner banner-warn">Kaydedilemedi, tekrar deneyin.</div>
+        )}
+
+        <div className="room-grid">
+          {visible.length === 0 ? (
+            <p className="grid-empty">Bu filtreye uygun oda yok.</p>
+          ) : (
+            visible.map((room) => (
+              <RoomCard key={room.oda_no} room={room} onClick={() => setSelected(room)} />
+            ))
+          )}
+        </div>
+      </AppShell>
+
       {selected && (
         <RoomEditor
           room={selected}
@@ -108,6 +153,6 @@ export default function Home() {
           onSave={(patch) => saveRoom(selected.oda_no, patch)}
         />
       )}
-    </main>
+    </>
   );
 }
