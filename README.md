@@ -10,7 +10,7 @@ Next.js uygulaması. `@opennextjs/cloudflare` ile Cloudflare Workers'ta
 pnpm install
 cp .dev.vars.example .dev.vars          # APP_PIN + SESSION_SECRET'i ayarla
 pnpm exec wrangler d1 execute apartsystem --local --file=schema.sql   # yerel D1'e şema
-pnpm dev
+pnpm dev            # http://localhost:7888
 ```
 
 ## Cloudflare kurulumu
