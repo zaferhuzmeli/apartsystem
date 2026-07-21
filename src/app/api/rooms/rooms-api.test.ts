@@ -54,6 +54,8 @@ describe("PATCH /api/rooms/[oda_no]", () => {
       params: Promise.resolve({ oda_no: "101" }),
     });
     expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toMatch(/durum|olmalı|geçersiz/i);
   });
 
   it("yetkisizse 401 döner", async () => {
