@@ -11,16 +11,21 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
-    });
-    setLoading(false);
-    if (res.ok) {
-      onSuccess();
-    } else {
-      setError("PIN hatalı");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      if (res.ok) {
+        onSuccess();
+      } else {
+        setError("PIN hatalı");
+      }
+    } catch {
+      setError("Bağlantı hatası, tekrar deneyin");
+    } finally {
+      setLoading(false);
     }
   }
 
