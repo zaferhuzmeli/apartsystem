@@ -740,8 +740,9 @@ button { font-family: inherit; }
 @media (max-width: 520px) { .modal .form-grid { grid-template-columns: 1fr; } }
 
 .tabs { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
-.tabs .tab { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border, #ccc); background: transparent; cursor: pointer; }
-.tabs .tab.on { background: var(--accent, #2563eb); color: #fff; border-color: transparent; }
+.tabs .tab { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft); font: inherit; font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s, color .12s; }
+.tabs .tab:hover { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-bg); }
+.tabs .tab.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 .tabs-cta { margin-left: auto; }
 .list-filter { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 
@@ -749,27 +750,54 @@ button { font-family: inherit; }
 .tape-scroll { overflow-x: auto; }
 .tape-grid { display: grid; grid-template-columns: 56px repeat(var(--days), minmax(40px, 1fr)); gap: 2px; min-width: 640px; }
 .tape-corner { position: sticky; left: 0; }
-.tape-daylabel { text-align: center; font-size: .7rem; opacity: .7; padding: 4px 0; }
-.tape-roomlabel { position: sticky; left: 0; background: var(--bg, #fff); font-weight: 600; display: flex; align-items: center; font-size: .8rem; }
+.tape-daylabel { text-align: center; font-size: .7rem; color: var(--ink-soft); padding: 5px 0; text-transform: capitalize; }
+.tape-daylabel.today { color: var(--brand-ink); font-weight: 800; }
+.tape-roomlabel { position: sticky; left: 0; background: var(--surface); font-weight: 600; display: flex; align-items: center; font-size: .8rem; color: var(--brand-ink); }
 .tape-track { grid-column: 2 / span var(--days); display: grid; grid-template-columns: repeat(var(--days), 1fr); position: relative; min-height: 34px; }
-.tape-cell { border: 1px dashed transparent; border-left: 1px solid rgba(0,0,0,.06); background: transparent; cursor: pointer; }
-.tape-cell:hover { background: rgba(37,99,235,.06); }
+.tape-cell { border: 1px dashed transparent; border-left: 1px solid var(--line); background: transparent; cursor: pointer; }
+.tape-cell:hover { background: var(--brand-bg); }
 .tape-bar { grid-row: 1; align-self: center; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; color: #fff; font-size: .72rem; padding: 0 4px; cursor: grab; user-select: none; touch-action: none; overflow: hidden; }
 .tape-bar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .tape-handle { width: 8px; align-self: stretch; cursor: ew-resize; opacity: .5; touch-action: none; }
 .tape-handle:hover { opacity: 1; background: rgba(255,255,255,.4); }
-.bar-on { background: #d97706; }
-.bar-onay { background: #2563eb; }
-.bar-in { background: #16a34a; }
+.bar-on { background: var(--uyari); }
+.bar-onay { background: var(--brand); }
+.bar-in { background: var(--bos); }
 
-.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.month-wd { text-align: center; font-size: .72rem; opacity: .6; padding: 4px 0; }
-.month-cell { min-height: 64px; border: 1px solid rgba(0,0,0,.08); border-radius: 8px; background: transparent; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 6px; cursor: pointer; text-align: left; }
-.month-cell:hover { background: rgba(37,99,235,.06); }
+.calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 0 4px; }
+.calendar-head h2 { font-size: 20px; line-height: 1.2; text-transform: capitalize; }
+.calendar-kicker { color: var(--ink-faint); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
+.calendar-actions { display: flex; gap: 6px; }
+.calendar-actions .btn { padding: 8px 11px; }
+.calendar-help { color: var(--ink-soft); font-size: 13px; margin: 0 0 12px; }
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.month-wd { text-align: center; color: var(--ink-soft); font-size: .72rem; font-weight: 700; padding: 5px 0; }
+.month-wd.weekend { color: var(--uyari); }
+.month-cell { min-height: 84px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px; cursor: pointer; text-align: left; transition: background .12s, border-color .12s, box-shadow .12s; }
+.month-cell:hover { background: var(--brand-bg); border-color: var(--brand); }
+.month-cell:focus-visible, .btn:focus-visible, .tabs .tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .month-cell.empty { border: none; background: transparent; cursor: default; }
-.month-day { font-weight: 600; font-size: .8rem; }
-.month-occ { font-size: .72rem; opacity: .8; }
-.month-names { font-size: .66rem; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.month-cell.weekend:not(.today) { background: var(--surface-2); }
+.month-cell.today { border: 2px solid var(--brand); padding: 7px; box-shadow: 0 0 0 2px var(--brand-bg); }
+.month-day { font-weight: 800; font-size: .86rem; }
+.month-occ { font-size: .72rem; font-weight: 700; }
+.month-occ.available { color: var(--bos); }
+.month-occ.occupied { color: var(--brand-ink); }
+.month-occ.full { color: var(--dolu); }
+.month-names { font-size: .7rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tape-range { color: var(--brand-ink); font-size: 14px; }
+
+@media (max-width: 620px) {
+  .reservations-page { padding: 20px 12px 48px; }
+  .calendar-head { align-items: flex-start; }
+  .calendar-help { font-size: 12px; }
+  .month-grid { gap: 3px; }
+  .month-cell { min-height: 70px; padding: 6px 5px; }
+  .month-cell.today { padding: 5px 4px; }
+  .month-occ { font-size: .62rem; }
+  .month-names { display: none; }
+  .month-wd { font-size: .65rem; }
+}
 
 /* Oda kartı: yaklaşan rezervasyon satırı + hover detay balonu */
 .room-card { position: relative; }

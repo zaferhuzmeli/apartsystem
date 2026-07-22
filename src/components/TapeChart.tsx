@@ -10,6 +10,8 @@ export const ROOMS: number[] = Array.from({ length: 15 }, (_, i) => 101 + i);
 const statusClass: Record<string, string> = {
   on_rezervasyon: "bar-on", onaylandi: "bar-onay", giris_yapti: "bar-in",
 };
+const DAY_LABEL = new Intl.DateTimeFormat("tr-TR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Istanbul" });
+const RANGE_LABEL = new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Istanbul" });
 
 type Drag = { id: number; mode: "move" | "start" | "end"; startX: number; dayDelta: number };
 
@@ -54,7 +56,7 @@ export function TapeChart({ reservations, onEdit, onCreate, onMove }: {
     <div className="tape">
       <div className="tape-nav">
         <button className="btn btn-ghost" onClick={() => setWindowStart(addDays(windowStart, -TAPE_DAYS))}>← Önceki</button>
-        <span className="mono">{windowStart} → {addDays(windowStart, TAPE_DAYS - 1)}</span>
+        <strong className="tape-range">{RANGE_LABEL.format(new Date(`${windowStart}T12:00:00Z`))} – {RANGE_LABEL.format(new Date(`${addDays(windowStart, TAPE_DAYS - 1)}T12:00:00Z`))}</strong>
         <button className="btn btn-ghost" onClick={() => setWindowStart(addDays(windowStart, TAPE_DAYS))}>Sonraki →</button>
         <button className="btn btn-ghost" onClick={() => setWindowStart(todayIstanbul())}>Bugün</button>
       </div>
@@ -62,7 +64,7 @@ export function TapeChart({ reservations, onEdit, onCreate, onMove }: {
       <div className="tape-scroll">
         <div className="tape-grid" style={{ ["--days" as string]: TAPE_DAYS }}>
           <div className="tape-corner" />
-          {days.map((d) => <div key={d} className="tape-daylabel">{d.slice(8)}/{d.slice(5, 7)}</div>)}
+          {days.map((d) => <div key={d} className={`tape-daylabel ${d === todayIstanbul() ? "today" : ""}`}>{DAY_LABEL.format(new Date(`${d}T12:00:00Z`))}</div>)}
 
           {ROOMS.map((oda) => (
             <div className="tape-row" key={oda} style={{ display: "contents" }}>

@@ -6,6 +6,18 @@ import { activeOn, occupancyOn, todayIstanbul } from "@/lib/calendar";
 import { ROOMS } from "@/components/TapeChart";
 
 const WEEKDAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const TURKISH_MONTH = new Intl.DateTimeFormat("tr-TR", {
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Istanbul",
+});
+const TURKISH_DAY = new Intl.DateTimeFormat("tr-TR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Istanbul",
+});
 
 // Verilen ay için (yyyy-mm) Pazartesi başlangıçlı grid hücreleri: her hücre ISO gün ya da "".
 function monthCells(year: number, month0: number): string[] {
@@ -32,17 +44,25 @@ export function MonthCalendar({ reservations, onPickDay }: {
 
   return (
     <div className="month">
-      <div className="tape-nav">
-        <button className="btn btn-ghost" onClick={() => shift(-1)}>← Önceki</button>
-        <span className="mono">{ym.y}-{String(ym.m + 1).padStart(2, "0")}</span>
-        <button className="btn btn-ghost" onClick={() => shift(1)}>Sonraki →</button>
+      <div className="calendar-head">
+        <div>
+          <p className="calendar-kicker">Aylık doluluk</p>
+          <h2>{TURKISH_MONTH.format(new Date(Date.UTC(ym.y, ym.m, 1)))}</h2>
+        </div>
+        <div className="calendar-actions">
+          <button className="btn btn-ghost" onClick={() => shift(-1)} aria-label="Önceki ay">←</button>
+          <button className="btn btn-ghost" onClick={() => setYm({ y: Number(today.slice(0, 4)), m: Number(today.slice(5, 7)) - 1 })}>Bugün</button>
+          <button className="btn btn-ghost" onClick={() => shift(1)} aria-label="Sonraki ay">→</button>
+        </div>
       </div>
-      <div className="month-grid">
-        {WEEKDAYS.map((w) => <div key={w} className="month-wd">{w}</div>)}
+      <p className="calendar-help">Bir güne dokunarak o günün rezervasyonlarını açın. Doluluk, oda bazında gösterilir.</p>
+      <div className="month-grid" role="grid" aria-label={`${TURKISH_MONTH.format(new Date(Date.UTC(ym.y, ym.m, 1)))} takvimi`}>
+        {WEEKDAYS.map((w, i) => <div key={w} className={`month-wd ${i > 4 ? "weekend" : ""}`} role="columnheader">{w}</div>)}
         {cells.map((day, i) => day === "" ? <div key={`e${i}`} className="month-cell empty" /> : (
-          <button key={day} className="month-cell" onClick={() => onPickDay(day)}>
+          <button key={day} className={`month-cell ${day === today ? "today" : ""} ${i % 7 > 4 ? "weekend" : ""}`} onClick={() => onPickDay(day)}
+            aria-label={`${TURKISH_DAY.format(new Date(`${day}T12:00:00Z`))}: ${occupancyOn(reservations, day)} / ${total} oda dolu`}>
             <span className="month-day">{Number(day.slice(8))}</span>
-            <span className="month-occ mono">{occupancyOn(reservations, day)}/{total}</span>
+            <span className={`month-occ mono ${occupancyOn(reservations, day) === 0 ? "available" : occupancyOn(reservations, day) === total ? "full" : "occupied"}`}>{occupancyOn(reservations, day)}/{total} dolu</span>
             <span className="month-names">{activeOn(reservations, day).slice(0, 3).map((r) => r.soyad).join(", ")}</span>
           </button>
         ))}
