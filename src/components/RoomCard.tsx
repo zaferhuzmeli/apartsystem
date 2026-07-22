@@ -14,6 +14,9 @@ export function RoomCard({ room, onClick }: { room: Room; onClick: () => void })
         </span>
       </div>
       <div className="room-price mono">{room.fiyat.toLocaleString("tr-TR")} ₺</div>
+      {typeof room.dolu_gece === "number" && room.dolu_gece > 0 && (
+        <div className="room-window">📅 7 günde {room.dolu_gece} gece dolu</div>
+      )}
       {dolu && (
         <>
           {room.misafir_adi && <div className="room-guest">👤 {room.misafir_adi}</div>}

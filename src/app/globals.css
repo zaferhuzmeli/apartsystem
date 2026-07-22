@@ -731,3 +731,5 @@ button { font-family: inherit; }
   .shell.collapsed .sidebar { display: flex; }
   .shell.collapsed .main { padding-top: 18px; }
 }
+
+.room-window { font-size: .72rem; opacity: .7; margin-top: 2px; }

@@ -7,6 +7,7 @@ import { RoomCard } from "@/components/RoomCard";
 import { RoomEditor } from "@/components/RoomEditor";
 import { AppShell } from "@/components/AppShell";
 import { Sidebar, type RoomFilter } from "@/components/Sidebar";
+import { todayIstanbul } from "@/lib/calendar";
 
 export default function Home() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -15,7 +16,7 @@ export default function Home() {
   const [filter, setFilter] = useState<RoomFilter>("tumu");
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
-  const [tarih, setTarih] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tarih, setTarih] = useState(() => todayIstanbul());
 
   const load = useCallback(async () => {
     try {
