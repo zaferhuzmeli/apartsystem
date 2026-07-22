@@ -2,6 +2,7 @@ import { d1Query } from "@/lib/d1";
 import { addCollection } from "@/lib/collections";
 import { addLog } from "@/lib/logs";
 import type { PaymentMethod } from "@/lib/collections";
+import { addDays, todayIstanbul } from "@/lib/calendar";
 
 export type Durum = "bos" | "dolu";
 
@@ -15,6 +16,7 @@ export interface Room {
   rezervasyon_durumu?: "on_rezervasyon" | "onaylandi" | "giris_yapti" | null;
   giris_tarihi?: string | null;
   cikis_tarihi?: string | null;
+  dolu_gece?: number;
 }
 
 export interface RoomPatch {
@@ -66,11 +68,18 @@ export function validateRoomPatch(input: unknown): RoomPatch {
 }
 
 export async function getAllRooms(tarih?: string): Promise<Room[]> {
-  const selectedDate = tarih ?? new Date().toISOString().slice(0, 10);
+  const selectedDate = tarih ?? todayIstanbul();
+  const windowEnd = addDays(selectedDate, 7); // 7 günlük kart özeti penceresi (hariç)
   return d1Query<Room>(`
     SELECT r.oda_no, r.durum, r.fatura_kesildi, r.fiyat,
       g.ad || ' ' || g.soyad AS misafir_adi, active.id AS rezervasyon_id,
-      active.durum AS rezervasyon_durumu, active.giris_tarihi, active.cikis_tarihi
+      active.durum AS rezervasyon_durumu, active.giris_tarihi, active.cikis_tarihi,
+      (SELECT CAST(COALESCE(SUM(
+         julianday(MIN(w.cikis_tarihi, ?)) - julianday(MAX(w.giris_tarihi, ?))
+       ), 0) AS INTEGER)
+       FROM reservations w
+       WHERE w.oda_no = r.oda_no AND w.durum != 'iptal'
+         AND w.giris_tarihi < ? AND w.cikis_tarihi > ?) AS dolu_gece
     FROM rooms r
     LEFT JOIN reservations active
       ON active.oda_no = r.oda_no
@@ -78,7 +87,7 @@ export async function getAllRooms(tarih?: string): Promise<Room[]> {
       AND active.giris_tarihi <= ? AND active.cikis_tarihi > ?
     LEFT JOIN guests g ON g.id = active.guest_id
     ORDER BY r.oda_no
-  `, [selectedDate, selectedDate]);
+  `, [windowEnd, selectedDate, windowEnd, selectedDate, selectedDate, selectedDate]);
 }
 
 export async function getRoom(oda_no: number): Promise<Room | null> {
