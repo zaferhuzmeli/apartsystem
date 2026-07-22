@@ -12,6 +12,9 @@ export interface Room {
   fiyat: number;
   misafir_adi?: string | null;
   rezervasyon_id?: number | null;
+  rezervasyon_durumu?: "on_rezervasyon" | "onaylandi" | "giris_yapti" | null;
+  giris_tarihi?: string | null;
+  cikis_tarihi?: string | null;
 }
 
 export interface RoomPatch {
@@ -62,17 +65,20 @@ export function validateRoomPatch(input: unknown): RoomPatch {
   return patch;
 }
 
-export async function getAllRooms(): Promise<Room[]> {
+export async function getAllRooms(tarih?: string): Promise<Room[]> {
+  const selectedDate = tarih ?? new Date().toISOString().slice(0, 10);
   return d1Query<Room>(`
     SELECT r.oda_no, r.durum, r.fatura_kesildi, r.fiyat,
-      g.ad || ' ' || g.soyad AS misafir_adi, active.id AS rezervasyon_id
+      g.ad || ' ' || g.soyad AS misafir_adi, active.id AS rezervasyon_id,
+      active.durum AS rezervasyon_durumu, active.giris_tarihi, active.cikis_tarihi
     FROM rooms r
     LEFT JOIN reservations active
       ON active.oda_no = r.oda_no
-      AND active.durum = 'giris_yapti'
+      AND active.durum IN ('on_rezervasyon', 'onaylandi', 'giris_yapti')
+      AND active.giris_tarihi <= ? AND active.cikis_tarihi > ?
     LEFT JOIN guests g ON g.id = active.guest_id
     ORDER BY r.oda_no
-  `);
+  `, [selectedDate, selectedDate]);
 }
 
 export async function getRoom(oda_no: number): Promise<Room | null> {

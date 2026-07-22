@@ -20,9 +20,9 @@ export function Sidebar({
   onSelectRoom: (room: Room) => void;
   onLogout: () => void;
 }) {
-  const bos = rooms.filter((r) => r.durum === "bos").length;
+  const bos = rooms.filter((r) => r.durum === "bos" && !r.rezervasyon_id).length;
   const dolu = rooms.length - bos;
-  const bekleyen = rooms.filter((r) => r.durum === "dolu" && !r.fatura_kesildi);
+  const bekleyen = rooms.filter((r) => (r.durum === "dolu" || r.rezervasyon_id) && !r.fatura_kesildi);
 
   const filters: { key: RoomFilter; label: string; count: number }[] = [
     { key: "tumu", label: "Tümü", count: rooms.length },

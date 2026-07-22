@@ -15,10 +15,11 @@ export default function Home() {
   const [filter, setFilter] = useState<RoomFilter>("tumu");
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [tarih, setTarih] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/rooms");
+      const res = await fetch(`/api/rooms?tarih=${tarih}`);
       if (res.status === 401) {
         setAuthed(false);
         return;
@@ -34,7 +35,7 @@ export default function Home() {
     } catch {
       setLoadError(true);
     }
-  }, []);
+  }, [tarih]);
 
   useEffect(() => {
     load();
@@ -69,9 +70,10 @@ export default function Home() {
   const visible = useMemo(
     () =>
       rooms.filter((r) => {
-        if (filter === "bos") return r.durum === "bos";
-        if (filter === "dolu") return r.durum === "dolu";
-        if (filter === "faturasiz") return r.durum === "dolu" && !r.fatura_kesildi;
+        const dolu = r.durum === "dolu" || Boolean(r.rezervasyon_id);
+        if (filter === "bos") return !dolu;
+        if (filter === "dolu") return dolu;
+        if (filter === "faturasiz") return dolu && !r.fatura_kesildi;
         return true;
       }),
     [rooms, filter],
@@ -122,8 +124,8 @@ export default function Home() {
         )}
       >
         <div className="main-head">
-          <h1>{filterLabel[filter]}</h1>
-          <span className="sub mono">{visible.length} oda</span>
+          <div><h1>{filterLabel[filter]}</h1><span className="sub mono">{visible.length} oda</span></div>
+          <label className="room-date-picker">Tarih<input type="date" value={tarih} onChange={(e) => setTarih(e.target.value)} /></label>
         </div>
 
         {loadError && (
