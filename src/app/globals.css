@@ -371,6 +371,7 @@ button { font-family: inherit; }
 .room-fatura { font-size: 12.5px; display: flex; align-items: center; gap: 5px; }
 .room-fatura.ok { color: var(--bos); }
 .room-fatura.no { color: var(--uyari); }
+.room-guest { font-size: 12.5px; color: var(--brand-ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- Drawer / overlay (mobil) ---------- */
 .overlay {
@@ -418,7 +419,7 @@ button { font-family: inherit; }
 .seg-btn.on-bos { border-color: var(--bos); background: var(--bos); color: #fff; }
 .seg-btn.on-dolu { border-color: var(--dolu); background: var(--dolu); color: #fff; }
 .field { display: grid; gap: 5px; font-size: 14px; color: var(--ink-soft); }
-.field input[type="number"] {
+.field input[type="number"], .field select {
   padding: 11px;
   font-size: 16px;
   border-radius: var(--radius-sm);
@@ -581,6 +582,29 @@ button { font-family: inherit; }
 .td-room { font-size: 13px; font-weight: 600; color: var(--brand-ink); white-space: nowrap; }
 .td-msg { color: var(--ink); }
 .td-amount { font-size: 15px; font-weight: 700; color: var(--bos); white-space: nowrap; }
+.payment-chip { display: inline-block; padding: 3px 8px; border-radius: 99px; background: var(--brand-bg); color: var(--brand-ink); font-size: 12px; font-weight: 700; }
+
+/* ---------- Rezervasyonlar ---------- */
+.reservations-page { max-width: 1060px; margin: 0 auto; padding: 28px 20px 60px; }
+.reservation-form { display: grid; gap: 16px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin-bottom: 22px; }
+.reservation-form h2 { font-size: 16px; }
+.form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.form-grid label { display: grid; gap: 5px; color: var(--ink-soft); font-size: 13px; }
+.form-grid input, .form-grid select, .form-grid textarea { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink); font: inherit; }
+.form-grid textarea { resize: vertical; min-height: 40px; }
+.reservation-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.reservation-card { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.reservation-card > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--brand-ink); }
+.reservation-card h2 { font-size: 16px; }
+.reservation-card p { font-size: 13px; color: var(--ink-soft); }
+.reservation-meta { font-size: 12px !important; color: var(--ink-faint) !important; }
+.reservation-status { padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+.status-on_rezervasyon { background: var(--uyari-bg); color: var(--uyari); }
+.status-onaylandi { background: var(--brand-bg); color: var(--brand-ink); }
+.status-giris_yapti { background: var(--dolu-bg); color: var(--dolu); }
+.status-cikti { background: var(--bos-bg); color: var(--bos); }
+.status-iptal { background: var(--surface-2); color: var(--ink-faint); }
+.reservation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
 /* Pagination */
 .pager {
@@ -694,6 +718,7 @@ button { font-family: inherit; }
   .sidebar.open { transform: translateX(0); }
   .overlay.show { display: block; }
   .main { padding: 18px 16px 60px; }
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sidebar .brand { display: none; }
 
   /* Mobilde masaüstü-daraltma yok: hamburger çekmece davranışı korunur */

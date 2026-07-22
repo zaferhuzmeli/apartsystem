@@ -1,6 +1,7 @@
 import { d1Query } from "@/lib/d1";
 import { addCollection } from "@/lib/collections";
 import { addLog } from "@/lib/logs";
+import type { PaymentMethod } from "@/lib/collections";
 
 export type Durum = "bos" | "dolu";
 
@@ -9,12 +10,15 @@ export interface Room {
   durum: Durum;
   fatura_kesildi: 0 | 1;
   fiyat: number;
+  misafir_adi?: string | null;
+  rezervasyon_id?: number | null;
 }
 
 export interface RoomPatch {
   durum?: Durum;
   fatura_kesildi?: 0 | 1;
   fiyat?: number;
+  odeme_yontemi?: PaymentMethod;
 }
 
 export function validateRoomPatch(input: unknown): RoomPatch {
@@ -45,6 +49,12 @@ export function validateRoomPatch(input: unknown): RoomPatch {
     }
     patch.fiyat = o.fiyat;
   }
+  if (o.odeme_yontemi !== undefined) {
+    if (o.odeme_yontemi !== "nakit" && o.odeme_yontemi !== "havale") {
+      throw new Error("odeme_yontemi 'nakit' veya 'havale' olmalı");
+    }
+    patch.odeme_yontemi = o.odeme_yontemi;
+  }
 
   if (Object.keys(patch).length === 0) {
     throw new Error("En az bir alan gönderilmeli");
@@ -53,7 +63,16 @@ export function validateRoomPatch(input: unknown): RoomPatch {
 }
 
 export async function getAllRooms(): Promise<Room[]> {
-  return d1Query<Room>("SELECT oda_no, durum, fatura_kesildi, fiyat FROM rooms ORDER BY oda_no");
+  return d1Query<Room>(`
+    SELECT r.oda_no, r.durum, r.fatura_kesildi, r.fiyat,
+      g.ad || ' ' || g.soyad AS misafir_adi, active.id AS rezervasyon_id
+    FROM rooms r
+    LEFT JOIN reservations active
+      ON active.oda_no = r.oda_no
+      AND active.durum = 'giris_yapti'
+    LEFT JOIN guests g ON g.id = active.guest_id
+    ORDER BY r.oda_no
+  `);
 }
 
 export async function getRoom(oda_no: number): Promise<Room | null> {
@@ -99,7 +118,7 @@ export async function applyRoomPatch(oda_no: number, patch: RoomPatch): Promise<
 
   const isCheckout = current.durum === "dolu" && patch.durum === "bos";
   const tutar = patch.fiyat ?? current.fiyat;
-  if (isCheckout) await addCollection(oda_no, tutar);
+  if (isCheckout) await addCollection(oda_no, tutar, patch.odeme_yontemi ?? "nakit");
 
   for (const mesaj of roomChangeMessages(current, patch, isCheckout ? tutar : null)) {
     await addLog(oda_no, mesaj);

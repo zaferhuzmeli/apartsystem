@@ -53,7 +53,7 @@ describe("getAllRooms", () => {
     ]);
     const rooms = await getAllRooms();
     expect(rooms).toHaveLength(1);
-    expect(spy.mock.calls[0][0]).toMatch(/ORDER BY oda_no/i);
+    expect(spy.mock.calls[0][0]).toMatch(/ORDER BY r\.oda_no/i);
   });
 });
 
@@ -122,7 +122,7 @@ describe("applyRoomPatch", () => {
   it("dolu→boş geçişinde tahsilat ekler ve loglar", async () => {
     const m = mocks(room({ durum: "dolu", fiyat: 1500 }));
     await applyRoomPatch(102, { durum: "bos", fiyat: 1500 });
-    expect(m.addCollection).toHaveBeenCalledWith(102, 1500);
+    expect(m.addCollection).toHaveBeenCalledWith(102, 1500, "nakit");
     expect(m.addLog).toHaveBeenCalledWith(102, "Durum: dolu → boş (çıkış, +1500₺)");
   });
 
@@ -141,7 +141,7 @@ describe("applyRoomPatch", () => {
   it("çıkışta fiyat değişmişse yeni fiyatı keser", async () => {
     const m = mocks(room({ durum: "dolu", fiyat: 1200 }));
     await applyRoomPatch(102, { durum: "bos", fiyat: 1500 });
-    expect(m.addCollection).toHaveBeenCalledWith(102, 1500);
+    expect(m.addCollection).toHaveBeenCalledWith(102, 1500, "nakit");
   });
 
   it("oda yoksa tahsilat/log yapmaz", async () => {

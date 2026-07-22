@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Room, RoomPatch } from "@/lib/rooms";
+import type { PaymentMethod } from "@/lib/collections";
 
 export function RoomEditor({
   room,
@@ -16,12 +17,13 @@ export function RoomEditor({
   const [fatura, setFatura] = useState<0 | 1>(room.fatura_kesildi);
   const [fiyat, setFiyat] = useState(String(room.fiyat));
   const [saving, setSaving] = useState(false);
+  const [odemeYontemi, setOdemeYontemi] = useState<PaymentMethod>("nakit");
 
   const willCheckout = room.durum === "dolu" && durum === "bos";
 
   async function save() {
     setSaving(true);
-    await onSave({ durum, fatura_kesildi: fatura, fiyat: Number(fiyat) || 0 });
+    await onSave({ durum, fatura_kesildi: fatura, fiyat: Number(fiyat) || 0, odeme_yontemi: odemeYontemi });
     setSaving(false);
     onClose();
   }
@@ -49,9 +51,18 @@ export function RoomEditor({
         </div>
 
         {willCheckout && (
-          <div className="banner banner-warn">
-            Çıkış: {(Number(fiyat) || 0).toLocaleString("tr-TR")} ₺ tahsilata eklenecek.
-          </div>
+          <>
+            <div className="banner banner-warn">
+              Çıkış: {(Number(fiyat) || 0).toLocaleString("tr-TR")} ₺ tahsilata eklenecek.
+            </div>
+            <label className="field">
+              Ödeme yöntemi
+              <select value={odemeYontemi} onChange={(e) => setOdemeYontemi(e.target.value as PaymentMethod)}>
+                <option value="nakit">Nakit</option>
+                <option value="havale">Havale / EFT</option>
+              </select>
+            </label>
+          </>
         )}
 
         <label className="check">

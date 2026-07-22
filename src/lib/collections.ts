@@ -5,8 +5,11 @@ export interface Collection {
   id: number;
   oda_no: number;
   tutar: number;
+  odeme_yontemi: PaymentMethod;
   tarih: string; // datetime('now') — UTC ISO benzeri
 }
+
+export type PaymentMethod = "nakit" | "havale";
 
 export interface CollectionFilter {
   from?: string; // YYYY-MM-DD (dahil)
@@ -30,8 +33,16 @@ function dateWhere(from?: string, to?: string): { clause: string; params: string
   return { clause: conds.length ? `WHERE ${conds.join(" AND ")}` : "", params };
 }
 
-export async function addCollection(oda_no: number, tutar: number): Promise<void> {
-  await d1Query("INSERT INTO collections (oda_no, tutar) VALUES (?, ?)", [oda_no, tutar]);
+export async function addCollection(
+  oda_no: number,
+  tutar: number,
+  odeme_yontemi: PaymentMethod = "nakit",
+): Promise<void> {
+  await d1Query("INSERT INTO collections (oda_no, tutar, odeme_yontemi) VALUES (?, ?, ?)", [
+    oda_no,
+    tutar,
+    odeme_yontemi,
+  ]);
 }
 
 export async function getCollections(opts: CollectionFilter = {}): Promise<Collection[]> {
@@ -40,7 +51,7 @@ export async function getCollections(opts: CollectionFilter = {}): Promise<Colle
   const offset = opts.offset ?? 0;
   // En yeni tahsilat her zaman en üstte (tarihe göre azalan)
   return d1Query<Collection>(
-    `SELECT id, oda_no, tutar, tarih FROM collections ${clause} ORDER BY tarih DESC, id DESC LIMIT ? OFFSET ?`,
+    `SELECT id, oda_no, tutar, odeme_yontemi, tarih FROM collections ${clause} ORDER BY tarih DESC, id DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset],
   );
 }
@@ -56,7 +67,7 @@ export async function getCollectionsCount(opts: CollectionFilter = {}): Promise<
 
 export async function getCollectionById(id: number): Promise<Collection | null> {
   const rows = await d1Query<Collection>(
-    "SELECT id, oda_no, tutar, tarih FROM collections WHERE id = ?",
+    "SELECT id, oda_no, tutar, odeme_yontemi, tarih FROM collections WHERE id = ?",
     [id],
   );
   return rows[0] ?? null;

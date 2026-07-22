@@ -193,6 +193,7 @@ export default function TahsilatPage() {
                   <th>Tarih</th>
                   <th>Oda</th>
                   <th className="ta-right">Tutar</th>
+                  <th>Ödeme</th>
                   <th aria-label="İşlem"></th>
                 </tr>
               </thead>
@@ -202,6 +203,7 @@ export default function TahsilatPage() {
                     <td className="td-time mono">{fmtDateTime(c.tarih)}</td>
                     <td className="td-room mono">Oda {c.oda_no}</td>
                     <td className="td-amount mono ta-right">{TL(c.tutar)} ₺</td>
+                    <td><span className="payment-chip">{c.odeme_yontemi === "havale" ? "Havale" : "Nakit"}</span></td>
                     <td className="ta-right">
                       <button
                         className="row-delete"

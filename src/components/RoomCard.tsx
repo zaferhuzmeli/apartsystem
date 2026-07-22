@@ -14,9 +14,12 @@ export function RoomCard({ room, onClick }: { room: Room; onClick: () => void })
       </div>
       <div className="room-price mono">{room.fiyat.toLocaleString("tr-TR")} ₺</div>
       {dolu && (
-        <div className={`room-fatura ${room.fatura_kesildi ? "ok" : "no"}`}>
-          {room.fatura_kesildi ? "✓ Fatura kesildi" : "⚠ Fatura bekliyor"}
-        </div>
+        <>
+          {room.misafir_adi && <div className="room-guest">👤 {room.misafir_adi}</div>}
+          <div className={`room-fatura ${room.fatura_kesildi ? "ok" : "no"}`}>
+            {room.fatura_kesildi ? "✓ Fatura kesildi" : "⚠ Fatura bekliyor"}
+          </div>
+        </>
       )}
     </button>
   );

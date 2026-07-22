@@ -95,6 +95,10 @@ export function Sidebar({
           <span>Tahsilat geçmişi</span>
           <span className="side-nav-arrow">→</span>
         </Link>
+        <Link className="side-nav-link" href="/rezervasyonlar">
+          <span>Rezervasyonlar</span>
+          <span className="side-nav-arrow">→</span>
+        </Link>
         <button className="side-nav-link side-logout" onClick={onLogout}>
           <span>Oturumu kapat</span>
           <span className="side-nav-arrow">⎋</span>

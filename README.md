@@ -13,6 +13,22 @@ pnpm exec wrangler d1 execute apartsystem --local --file=schema.sql   # yerel D1
 pnpm dev            # http://localhost:7888
 ```
 
+## Rezervasyon ve ödeme güncellemesi
+
+Yeni kurulumlarda `schema.sql` rezervasyon ve ödeme alanlarını zaten oluşturur.
+Mevcut bir D1 veritabanını güncellemek için, bir kez aşağıdaki migration'ı uygula:
+
+```bash
+pnpm exec wrangler d1 execute apartsystem --local --file=migrations/0001_reservations.sql
+pnpm exec wrangler d1 execute apartsystem --remote --file=migrations/0001_reservations.sql
+```
+
+`/rezervasyonlar` ekranından müşteri ve tarih girilerek rezervasyon açılır.
+Aynı odaya tarihleri kesişen ikinci bir rezervasyon kaydedilemez; çıkış günü
+aynı gün yeni giriş için kullanılabilir. "Giriş yapıldı" seçildiğinde müşteri
+oda kartında görünür. Çıkışta nakit veya havale/EFT seçilir ve tahsilat geçmişine
+ödeme yöntemiyle birlikte eklenir.
+
 ## Cloudflare kurulumu
 
 1. Cloudflare hesabı aç (ücretsiz).

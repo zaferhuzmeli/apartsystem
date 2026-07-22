@@ -16,7 +16,7 @@ describe("addCollection", () => {
     await addCollection(102, 1500);
     const [sql, params] = spy.mock.calls[0];
     expect(sql).toMatch(/INSERT INTO collections/i);
-    expect(params).toEqual([102, 1500]);
+    expect(params).toEqual([102, 1500, "nakit"]);
   });
 });
 
