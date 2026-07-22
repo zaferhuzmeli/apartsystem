@@ -36,6 +36,11 @@ export function ReservationEditor({ target, onClose, onSaved, onError }: {
   const set = (k: keyof Fields) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
   async function save() {
+    // Modal form submit değil (butonlar onClick); zorunlu alanları burada denetle.
+    if (!f.ad.trim() || !f.soyad.trim() || !f.giris_tarihi || !f.cikis_tarihi) {
+      onError("Ad, soyad, giriş ve çıkış tarihi zorunlu."); return;
+    }
+    if (!(Number(f.gunluk_fiyat) > 0)) { onError("Günlük fiyat 0'dan büyük olmalı."); return; }
     setSaving(true);
     const payload = {
       giris_tarihi: f.giris_tarihi, cikis_tarihi: f.cikis_tarihi, gunluk_fiyat: Number(f.gunluk_fiyat),
@@ -72,9 +77,9 @@ export function ReservationEditor({ target, onClose, onSaved, onError }: {
         <div className="form-grid">
           <label>Giriş<input type="date" value={f.giris_tarihi} onChange={(e) => set("giris_tarihi")(e.target.value)} /></label>
           <label>Çıkış<input type="date" min={f.giris_tarihi || undefined} value={f.cikis_tarihi} onChange={(e) => set("cikis_tarihi")(e.target.value)} /></label>
-          <label>Günlük fiyat<input type="number" min={0} value={f.gunluk_fiyat} onChange={(e) => set("gunluk_fiyat")(e.target.value)} /></label>
-          <label>Ad<input value={f.ad} onChange={(e) => set("ad")(e.target.value)} /></label>
-          <label>Soyad<input value={f.soyad} onChange={(e) => set("soyad")(e.target.value)} /></label>
+          <label>Günlük fiyat<input required type="number" min={1} value={f.gunluk_fiyat} onChange={(e) => set("gunluk_fiyat")(e.target.value)} /></label>
+          <label>Ad<input required value={f.ad} onChange={(e) => set("ad")(e.target.value)} /></label>
+          <label>Soyad<input required value={f.soyad} onChange={(e) => set("soyad")(e.target.value)} /></label>
           <label>Telefon<input value={f.telefon} onChange={(e) => set("telefon")(e.target.value)} /></label>
           <label>Plaka<input value={f.plaka} onChange={(e) => set("plaka")(e.target.value.toUpperCase())} /></label>
           <label>T.C. kimlik<input inputMode="numeric" value={f.tc_kimlik} onChange={(e) => set("tc_kimlik")(e.target.value)} /></label>

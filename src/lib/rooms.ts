@@ -78,7 +78,7 @@ export async function getAllRooms(tarih?: string): Promise<Room[]> {
          julianday(MIN(w.cikis_tarihi, ?)) - julianday(MAX(w.giris_tarihi, ?))
        ), 0) AS INTEGER)
        FROM reservations w
-       WHERE w.oda_no = r.oda_no AND w.durum != 'iptal'
+       WHERE w.oda_no = r.oda_no AND w.durum IN ('on_rezervasyon', 'onaylandi', 'giris_yapti')
          AND w.giris_tarihi < ? AND w.cikis_tarihi > ?) AS dolu_gece
     FROM rooms r
     LEFT JOIN reservations active
