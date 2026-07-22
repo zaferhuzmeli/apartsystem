@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/LoginForm";
 import { ReservationList } from "@/components/ReservationList";
 import { ReservationEditor, type EditorTarget } from "@/components/ReservationEditor";
 import { TapeChart } from "@/components/TapeChart";
+import { MonthCalendar } from "@/components/MonthCalendar";
 import { todayIstanbul } from "@/lib/calendar";
 import type { Reservation } from "@/lib/reservations";
 
@@ -18,6 +19,7 @@ export default function ReservationsPage() {
   const [calTab, setCalTab] = useState<"serit" | "ay">("serit");
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [error, setError] = useState("");
+  const [listeGun, setListeGun] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -55,7 +57,7 @@ export default function ReservationsPage() {
 
     {error && <div className="banner banner-warn">{error}</div>}
 
-    {tab === "liste" && <ReservationList reservations={reservations} onEdit={(r) => setEditor({ mode: "edit", reservation: r })} />}
+    {tab === "liste" && <ReservationList reservations={reservations} gun={listeGun} onGun={setListeGun} onEdit={(r) => setEditor({ mode: "edit", reservation: r })} />}
     {tab === "takvim" && <>
       <div className="tabs">
         <button className={`tab ${calTab === "serit" ? "on" : ""}`} onClick={() => setCalTab("serit")}>Şerit</button>
@@ -67,7 +69,10 @@ export default function ReservationsPage() {
         onCreate={(oda_no, giris_tarihi) => setEditor({ mode: "create", oda_no, giris_tarihi })}
         onMove={moveReservation}
       />}
-      {calTab === "ay" && <p className="grid-empty">Ay takvimi yükleniyor…</p>}
+      {calTab === "ay" && <MonthCalendar
+        reservations={reservations}
+        onPickDay={(day) => { setListeGun(day); setTab("liste"); }}
+      />}
     </>}
 
     {editor && <ReservationEditor target={editor} onClose={() => setEditor(null)} onSaved={load} onError={setError} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Reservation, ReservationStatus } from "@/lib/reservations";
 import { activeOn } from "@/lib/calendar";
 
@@ -15,20 +15,16 @@ function mask(tc: string | null) {
   return tc ? `${"•".repeat(Math.max(0, tc.length - 4))}${tc.slice(-4)}` : null;
 }
 
-export function ReservationList({ reservations, onEdit }: {
-  reservations: Reservation[]; onEdit: (r: Reservation) => void;
+export function ReservationList({ reservations, gun, onGun, onEdit }: {
+  reservations: Reservation[]; gun: string; onGun: (g: string) => void; onEdit: (r: Reservation) => void;
 }) {
-  const [gun, setGun] = useState("");
-  const visible = useMemo(
-    () => (gun ? activeOn(reservations, gun) : reservations),
-    [reservations, gun],
-  );
+  const visible = useMemo(() => (gun ? activeOn(reservations, gun) : reservations), [reservations, gun]);
 
   return (
     <>
       <div className="list-filter">
-        <label className="room-date-picker">Güne göre<input type="date" value={gun} onChange={(e) => setGun(e.target.value)} /></label>
-        {gun && <button className="btn btn-ghost" onClick={() => setGun("")}>Tümü</button>}
+        <label className="room-date-picker">Güne göre<input type="date" value={gun} onChange={(e) => onGun(e.target.value)} /></label>
+        {gun && <button className="btn btn-ghost" onClick={() => onGun("")}>Tümü</button>}
         <span className="sub mono">{visible.length} rezervasyon</span>
       </div>
       <div className="reservation-list">

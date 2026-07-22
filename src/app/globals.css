@@ -761,3 +761,12 @@ button { font-family: inherit; }
 .bar-on { background: #d97706; }
 .bar-onay { background: #2563eb; }
 .bar-in { background: #16a34a; }
+
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month-wd { text-align: center; font-size: .72rem; opacity: .6; padding: 4px 0; }
+.month-cell { min-height: 64px; border: 1px solid rgba(0,0,0,.08); border-radius: 8px; background: transparent; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 6px; cursor: pointer; text-align: left; }
+.month-cell:hover { background: rgba(37,99,235,.06); }
+.month-cell.empty { border: none; background: transparent; cursor: default; }
+.month-day { font-weight: 600; font-size: .8rem; }
+.month-occ { font-size: .72rem; opacity: .8; }
+.month-names { font-size: .66rem; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
