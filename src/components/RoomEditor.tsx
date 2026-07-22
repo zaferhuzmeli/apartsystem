@@ -8,10 +8,12 @@ export function RoomEditor({
   room,
   onClose,
   onSave,
+  onAddReservation,
 }: {
   room: Room;
   onClose: () => void;
   onSave: (patch: RoomPatch) => Promise<void>;
+  onAddReservation?: () => void;
 }) {
   const [durum, setDurum] = useState(room.durum);
   const [fatura, setFatura] = useState<0 | 1>(room.fatura_kesildi);
@@ -83,6 +85,12 @@ export function RoomEditor({
             onChange={(e) => setFiyat(e.target.value)}
           />
         </label>
+
+        {onAddReservation && (
+          <button className="btn btn-ghost room-add-res" onClick={onAddReservation}>
+            + Rezervasyon ekle
+          </button>
+        )}
 
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={onClose}>

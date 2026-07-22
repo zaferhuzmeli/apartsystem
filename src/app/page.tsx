@@ -5,6 +5,7 @@ import type { Room, RoomPatch } from "@/lib/rooms";
 import { LoginForm } from "@/components/LoginForm";
 import { RoomCard } from "@/components/RoomCard";
 import { RoomEditor } from "@/components/RoomEditor";
+import { ReservationEditor, type EditorTarget } from "@/components/ReservationEditor";
 import { AppShell } from "@/components/AppShell";
 import { Sidebar, type RoomFilter } from "@/components/Sidebar";
 import { todayIstanbul } from "@/lib/calendar";
@@ -13,6 +14,7 @@ export default function Home() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selected, setSelected] = useState<Room | null>(null);
+  const [resEditor, setResEditor] = useState<EditorTarget | null>(null);
   const [filter, setFilter] = useState<RoomFilter>("tumu");
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -154,6 +156,19 @@ export default function Home() {
           room={selected}
           onClose={() => setSelected(null)}
           onSave={(patch) => saveRoom(selected.oda_no, patch)}
+          onAddReservation={() => {
+            setResEditor({ mode: "create", oda_no: selected.oda_no, giris_tarihi: tarih });
+            setSelected(null);
+          }}
+        />
+      )}
+
+      {resEditor && (
+        <ReservationEditor
+          target={resEditor}
+          onClose={() => setResEditor(null)}
+          onSaved={load}
+          onError={() => setSaveError(true)}
         />
       )}
     </>

@@ -2,9 +2,14 @@
 
 import type { Room } from "@/lib/rooms";
 
+const kisa = (d?: string | null) => (d ? `${d.slice(8)}.${d.slice(5, 7)}` : "");
+
 export function RoomCard({ room, onClick }: { room: Room; onClick: () => void }) {
   const rezerve = Boolean(room.rezervasyon_id);
   const dolu = room.durum === "dolu" || rezerve;
+  const sonraki = room.sonraki_misafir
+    ? { ad: room.sonraki_misafir, giris: room.sonraki_giris, cikis: room.sonraki_cikis, fiyat: room.sonraki_fiyat, tel: room.sonraki_telefon }
+    : null;
   return (
     <button className={`room-card ${dolu ? "is-dolu" : "is-bos"}`} onClick={onClick}>
       <div className="room-top">
@@ -25,6 +30,19 @@ export function RoomCard({ room, onClick }: { room: Room; onClick: () => void })
             {room.fatura_kesildi ? "✓ Fatura kesildi" : "⚠ Fatura bekliyor"}
           </div>
         </>
+      )}
+      {/* Seçili gün boşken bile yaklaşan rezervasyonu göster */}
+      {!dolu && sonraki && (
+        <div className="room-next">📌 Sonraki: {sonraki.ad} · {kisa(sonraki.giris)}–{kisa(sonraki.cikis)}</div>
+      )}
+      {/* Hover detay balonu */}
+      {sonraki && (
+        <div className="room-tip" role="tooltip">
+          <strong>{sonraki.ad}</strong>
+          <span>{kisa(sonraki.giris)} → {kisa(sonraki.cikis)}</span>
+          {typeof sonraki.fiyat === "number" && <span>{sonraki.fiyat.toLocaleString("tr-TR")} ₺/gece</span>}
+          {sonraki.tel && <span>☎ {sonraki.tel}</span>}
+        </div>
       )}
     </button>
   );

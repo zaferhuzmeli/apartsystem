@@ -770,3 +770,17 @@ button { font-family: inherit; }
 .month-day { font-weight: 600; font-size: .8rem; }
 .month-occ { font-size: .72rem; opacity: .8; }
 .month-names { font-size: .66rem; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* Oda kartı: yaklaşan rezervasyon satırı + hover detay balonu */
+.room-card { position: relative; }
+.room-next { font-size: .72rem; opacity: .8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.room-tip {
+  position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px);
+  display: none; flex-direction: column; gap: 2px;
+  background: #0f172a; color: #f8fafc; padding: 8px 10px; border-radius: 8px;
+  font-size: .74rem; text-align: left; z-index: 20;
+  box-shadow: 0 6px 18px rgba(0,0,0,.28); pointer-events: none;
+}
+.room-tip strong { font-size: .8rem; }
+.room-card:hover .room-tip { display: flex; }
+.room-add-res { width: 100%; margin-top: 6px; border-style: dashed; }

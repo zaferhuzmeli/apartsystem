@@ -17,6 +17,12 @@ export interface Room {
   giris_tarihi?: string | null;
   cikis_tarihi?: string | null;
   dolu_gece?: number;
+  // Odanın seçili günden itibaren en yakın (mevcut/gelecek) aktif rezervasyonu.
+  sonraki_misafir?: string | null;
+  sonraki_giris?: string | null;
+  sonraki_cikis?: string | null;
+  sonraki_fiyat?: number | null;
+  sonraki_telefon?: string | null;
 }
 
 export interface RoomPatch {
@@ -79,15 +85,26 @@ export async function getAllRooms(tarih?: string): Promise<Room[]> {
        ), 0) AS INTEGER)
        FROM reservations w
        WHERE w.oda_no = r.oda_no AND w.durum IN ('on_rezervasyon', 'onaylandi', 'giris_yapti')
-         AND w.giris_tarihi < ? AND w.cikis_tarihi > ?) AS dolu_gece
+         AND w.giris_tarihi < ? AND w.cikis_tarihi > ?) AS dolu_gece,
+      ng.ad || ' ' || ng.soyad AS sonraki_misafir,
+      nx.giris_tarihi AS sonraki_giris, nx.cikis_tarihi AS sonraki_cikis,
+      nx.gunluk_fiyat AS sonraki_fiyat, ng.telefon AS sonraki_telefon
     FROM rooms r
     LEFT JOIN reservations active
       ON active.oda_no = r.oda_no
       AND active.durum IN ('on_rezervasyon', 'onaylandi', 'giris_yapti')
       AND active.giris_tarihi <= ? AND active.cikis_tarihi > ?
     LEFT JOIN guests g ON g.id = active.guest_id
+    LEFT JOIN reservations nx ON nx.id = (
+      SELECT id FROM reservations w
+      WHERE w.oda_no = r.oda_no
+        AND w.durum IN ('on_rezervasyon', 'onaylandi', 'giris_yapti')
+        AND w.cikis_tarihi > ?
+      ORDER BY w.giris_tarihi ASC LIMIT 1
+    )
+    LEFT JOIN guests ng ON ng.id = nx.guest_id
     ORDER BY r.oda_no
-  `, [windowEnd, selectedDate, windowEnd, selectedDate, selectedDate, selectedDate]);
+  `, [windowEnd, selectedDate, windowEnd, selectedDate, selectedDate, selectedDate, selectedDate]);
 }
 
 export async function getRoom(oda_no: number): Promise<Room | null> {
