@@ -55,6 +55,16 @@ describe("getAllRooms", () => {
     expect(rooms).toHaveLength(1);
     expect(spy.mock.calls[0][0]).toMatch(/ORDER BY r\.oda_no/i);
   });
+
+  it("dolu_gece alt-sorgusunu 7 günlük pencereyle sorgular", async () => {
+    const spy = vi.spyOn(d1, "d1Query").mockResolvedValue([]);
+    await getAllRooms("2026-07-10");
+    const [sql, params] = spy.mock.calls[0];
+    expect(sql).toMatch(/AS dolu_gece/i);
+    // pencere sonu = giriş + 7 gün
+    expect(params).toContain("2026-07-17");
+    expect(params).toContain("2026-07-10");
+  });
 });
 
 describe("updateRoom", () => {
