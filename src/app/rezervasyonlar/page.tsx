@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LoginForm } from "@/components/LoginForm";
 import { ReservationList } from "@/components/ReservationList";
 import { ReservationEditor, type EditorTarget } from "@/components/ReservationEditor";
+import { TapeChart } from "@/components/TapeChart";
 import { todayIstanbul } from "@/lib/calendar";
 import type { Reservation } from "@/lib/reservations";
 
@@ -14,6 +15,7 @@ export default function ReservationsPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tab, setTab] = useState<Tab>("liste");
+  const [calTab, setCalTab] = useState<"serit" | "ay">("serit");
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [error, setError] = useState("");
 
@@ -27,6 +29,17 @@ export default function ReservationsPage() {
     } catch { setError("Rezervasyonlar yüklenemedi."); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  async function moveReservation(r: Reservation, giris: string, cikis: string): Promise<boolean> {
+    const res = await fetch(`/api/reservations/${r.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giris_tarihi: giris, cikis_tarihi: cikis, gunluk_fiyat: r.gunluk_fiyat, ad: r.ad, soyad: r.soyad, telefon: r.telefon ?? undefined, plaka: r.plaka ?? undefined, tc_kimlik: r.tc_kimlik ?? undefined, notlar: r.notlar ?? undefined }),
+    });
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    if (!res.ok) setError(body.error ?? "Taşınamadı.");
+    await load();
+    return res.ok;
+  }
 
   if (authed === null) return <div className="center-state"><p>{error || "Yükleniyor…"}</p></div>;
   if (!authed) return <LoginForm onSuccess={load} />;
@@ -43,7 +56,19 @@ export default function ReservationsPage() {
     {error && <div className="banner banner-warn">{error}</div>}
 
     {tab === "liste" && <ReservationList reservations={reservations} onEdit={(r) => setEditor({ mode: "edit", reservation: r })} />}
-    {tab === "takvim" && <p className="grid-empty">Takvim yükleniyor…</p>}
+    {tab === "takvim" && <>
+      <div className="tabs">
+        <button className={`tab ${calTab === "serit" ? "on" : ""}`} onClick={() => setCalTab("serit")}>Şerit</button>
+        <button className={`tab ${calTab === "ay" ? "on" : ""}`} onClick={() => setCalTab("ay")}>Ay</button>
+      </div>
+      {calTab === "serit" && <TapeChart
+        reservations={reservations}
+        onEdit={(r) => setEditor({ mode: "edit", reservation: r })}
+        onCreate={(oda_no, giris_tarihi) => setEditor({ mode: "create", oda_no, giris_tarihi })}
+        onMove={moveReservation}
+      />}
+      {calTab === "ay" && <p className="grid-empty">Ay takvimi yükleniyor…</p>}
+    </>}
 
     {editor && <ReservationEditor target={editor} onClose={() => setEditor(null)} onSaved={load} onError={setError} />}
   </div>;
